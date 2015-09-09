@@ -37,7 +37,7 @@ CFLAGS  = -O2 -Wall -Wno-parentheses $(INC)
 
 #define all project specific object files
 # list of obj files
-OBJ = $(ASRC:.asm=.o) $(SRC:.cpp=.o)
+OBJ = $(ASRC:.asm=.o) $(SRC:.c=.o)
 
 
 all: $(TARGET)
