@@ -7,11 +7,17 @@
 
 int main (int argc, char* argv[])
 {
-	char msg[]="HELLO WORLD\n";
+	char msg[]="HELLO WORLD";
 
-	print_hello(msg);
+	printf( "%s from main", msg );
+	printf("\n");
 
-	printf( "\nHELLO, WORLD from main\n" );
+	print_hello (msg);
+	printf("\n");
+
+	print_hello2(msg);
+	printf("\n");
+
 	return 0;
 }
 

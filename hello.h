@@ -4,4 +4,5 @@
 */
 
 
-int print_hello (char* msg);
+int print_hello  (char* msg);
+int print_hello2 (char* msg);

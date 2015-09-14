@@ -5,9 +5,9 @@
 #include <stdio.h>
 #include "hello.h"
 
-int print_hello (char* msg)
+int print_hello2 (char* msg)
 {
-	printf( "%s from libhello.so", msg );
+	printf( "%s from libhello.so (another function)", msg );
 	return 0;
 }
 
