@@ -28,7 +28,7 @@ INC =
 #  *** Translator's Definitions **
 
 CXXFLAGS  = -O2 -Wall -Wno-parentheses $(INC) 
-CFLAGS  = -O2 -Wall -Wno-parentheses $(INC)
+CFLAGS  = -O2 -Wall -Wno-parentheses $(INC) -fPIC
 
 #define all project specific object files
 # list of obj files -rdynamic
@@ -41,7 +41,7 @@ $(TARGET): $(OBJ)
 	gcc   $(CFLAGS) $^ $(LIBS) -o $@ 
 
 mylib: $(LIBOBJ)
-	gcc $(FLAGS) -shared $^ -o lib$(LIBTRG).so -fPIC
+	gcc $(FLAGS) -shared $^ -o lib$(LIBTRG).so
 
 .PHONY: clean clean_all run
 clean:
@@ -54,4 +54,3 @@ clean_all:
 run:
 	export LD_LIBRARY_PATH=`pwd`
 	./$(TARGET)
-
