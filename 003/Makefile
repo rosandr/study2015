@@ -18,8 +18,7 @@ LIBSRC = printhello.c
 
 #additional libraries and object files to link
 #LIBS = -L/usr/lib/mysql
-#LIBS = -L/home/study/tmp/study2015
-LIBS = -L. -l$(LIBTRG)
+LIBS =-L/usr/lib/i386-linux-gnu/ -ldl
 
 #additional includes to compile
 #INC =-I/usr/include/mysql-I$(KERNELDIR)/include
@@ -28,7 +27,6 @@ INC =
 #========================================================================
 #  *** Translator's Definitions **
 
-MAKEFLAGS = -k
 CXXFLAGS  = -O2 -Wall -Wno-parentheses $(INC) 
 CFLAGS  = -O2 -Wall -Wno-parentheses $(INC)
 
@@ -37,10 +35,10 @@ CFLAGS  = -O2 -Wall -Wno-parentheses $(INC)
 OBJ = $(ASRC:.asm=.o) $(SRC:.c=.o)
 LIBOBJ = $(LIBSRC:.c=.o)
 
-all: $(TARGET) 
+all: mylib $(TARGET) 
 
-$(TARGET):	$(OBJ) 
-	gcc $(CFLAGS) $^ $(LIBS) -o $@  -fPIC
+$(TARGET): $(OBJ) 
+	gcc $(CFLAGS) $^ $(LIBS) -o $@ 
 
 mylib: $(LIBOBJ)
 	gcc $(FLAGS) -shared $^ -o lib$(LIBTRG).so -fPIC
