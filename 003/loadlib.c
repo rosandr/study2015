@@ -12,7 +12,7 @@ int main(int argc, char** argv, char** env)
     char  msg[] = "Hello from dynamically loaded library\n";
 
     // open library
-    dl_handle = dl_open( "libhello.so", RTLD_LAZY );
+    dl_handle = dlopen( "./libhello.so", RTLD_LAZY );
     if( !dl_handle )
     {
 	fprintf(stderr, "lib open error: %s\n", dlerror() );

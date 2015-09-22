@@ -31,14 +31,14 @@ CXXFLAGS  = -O2 -Wall -Wno-parentheses $(INC)
 CFLAGS  = -O2 -Wall -Wno-parentheses $(INC)
 
 #define all project specific object files
-# list of obj files
+# list of obj files -rdynamic
 OBJ = $(ASRC:.asm=.o) $(SRC:.c=.o)
 LIBOBJ = $(LIBSRC:.c=.o)
 
 all: mylib $(TARGET) 
 
 $(TARGET): $(OBJ) 
-	gcc $(CFLAGS) $^ $(LIBS) -o $@ 
+	gcc   $(CFLAGS) $^ $(LIBS) -o $@ 
 
 mylib: $(LIBOBJ)
 	gcc $(FLAGS) -shared $^ -o lib$(LIBTRG).so -fPIC
@@ -53,5 +53,5 @@ clean_all:
 
 run:
 	export LD_LIBRARY_PATH=`pwd`
-	./hello
+	./$(TARGET)
 
