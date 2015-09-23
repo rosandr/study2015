@@ -52,5 +52,5 @@ clean_all:
 	rm -f *.o *.so $(TARGET) 
 
 run:
-	export LD_LIBRARY_PATH=`pwd`
-	./$(TARGET)
+#	export LD_LIBRARY_PATH=`pwd`
+	./$(TARGET) 
