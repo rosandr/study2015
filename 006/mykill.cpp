@@ -15,7 +15,7 @@ int main(int argc, char** argv, char** env)
     if (argc <3)
     {
 	printf("\nUsage:\t%s pid sig\n", basename(argv[0]));
-	printf("\tpid - process ID,\n\tsig - sinnal number [1-32].\n");
+	printf("\tpid - process ID,\n\tsig - signal number [1-32].\n");
 	return 0;
     }
 
