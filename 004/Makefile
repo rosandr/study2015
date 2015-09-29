@@ -8,7 +8,7 @@ LIBTRG = hello
 #
 
 #put your C source files here
-SRC = proctree.c
+SRC = proctree.cpp
 
 #put your library  source files here
 LIBSRC = printhello.c printhello2.c
@@ -30,19 +30,19 @@ INC =
 #  *** Translator's Definitions **
 
 MAKEFLAGS = -k
-CXXFLAGS  = -O2 -Wall -Wno-parentheses $(INC) 
+CXXFLAGS  = -O2 -Wall -Wno-parentheses $(INC) -fPIC
 CFLAGS  = -O2 -Wall -Wno-parentheses $(INC) -fPIC
 
 
 #define all project specific object files
 # list of obj files
 OBJ = $(ASRC:.asm=.o) $(SRC:.c=.o)
-LIBOBJ = $(LIBSRC:.c=.o)
+LIBOBJ = $(LIBSRC:.cpp=.o)
 
 all: $(TARGET) 
 
 $(TARGET):	$(OBJ) 
-	gcc $(CFLAGS) $^ $(LIBS) -o $@
+	g++ $(CXXFLAGS) $^ $(LIBS) -o $@
 
 mylib: $(LIBOBJ)
 	gcc $(FLAGS) -shared $^ -o lib$(LIBTRG).so
