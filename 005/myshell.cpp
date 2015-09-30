@@ -18,7 +18,7 @@ using namespace std;
 void sigint_handler(int sig)
 { 
 	//(void)sig; 
-	printf("\n%d bye-bye...\n", sig); 
+	printf("\nbye-bye...\n"); 
 }
  
 
@@ -35,7 +35,7 @@ int main(int argc, char** argv, char** env)
 
 	do
 	{
-		printf("sh >");
+		printf("sh > ");
 		fflush (stdout);
 
 		if( !fgets(buf, BUF_SIZE, stdin) )	break;
