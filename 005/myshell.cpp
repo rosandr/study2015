@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-//#include <errno.h>
+#include <signal.h>
 //#include <unistd.h>
 
 //#include <sys/types.h>
@@ -14,17 +14,21 @@ using namespace std;
 
 #define BUF_SIZE 80
 
+//-------------------------------------------------------------------------
+void sigint_handler(int sig)
+{ 
+	//(void)sig; 
+	printf("\n%d bye-bye...\n", sig); 
+}
+ 
+
 int main(int argc, char** argv, char** env)
 {
-	/*
-    if (argc <2)
-    {
-		printf("\nUsage:\t%s cmd [opt] [args]\n", basename(argv[0]));
-		printf("\tcmd - shell command,\n\topt - command option\n\targs - command arguments\n");
-		printf("Exit:\tCtrl+C\n");printf("Example:\t%s cat /proc/cpuinfo 2>/dev/null\n", basename(argv[0]));
-		return 0;
-    }
-	*/
+    static struct sigaction act;
+
+    act.sa_handler = sigint_handler;
+    sigaction(SIGINT, &act, NULL);		// ^C
+	
 	int rc=0;
 	char buf[BUF_SIZE];
 	char cmdline[BUF_SIZE];
