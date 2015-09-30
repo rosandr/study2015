@@ -2,52 +2,44 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <signal.h>
-#include <error.h>
-#include <asm-generic/errno-base.h>
+//#include <errno.h>
+//#include <unistd.h>
+
+//#include <sys/types.h>
+//#include <sys/wait.h>
 
 #include <iostream>
+
 using namespace std;
+
 #define BUF_SIZE 80
 
 int main(int argc, char** argv, char** env)
 {
-    if (argc <3)
+	/*
+    if (argc <2)
     {
-	printf("\nUsage:\t%s pid sig\n", basename(argv[0]));
-	printf("\tpid - process ID,\n\tsig - signal number [1-32].\n");
-	return 0;
+		printf("\nUsage:\t%s cmd [opt] [args]\n", basename(argv[0]));
+		printf("\tcmd - shell command,\n\topt - command option\n\targs - command arguments\n");
+		printf("Exit:\tCtrl+C\n");printf("Example:\t%s cat /proc/cpuinfo 2>/dev/null\n", basename(argv[0]));
+		return 0;
     }
+	*/
+	int rc=0;
+	char buf[BUF_SIZE];
+	char cmdline[BUF_SIZE];
 
-    int pid = atoi (argv[1]);
-    int sig = atoi (argv[2]);
-
-    printf("U sure signal=%d to be sent to process=%d (y/n)?...", sig, pid);
-    int ch = fgetc(stdin);
-
-    if( ch=='y')
-    {
-	// printf("%d  y=%d  n=%d", ch, 'y', 'n');
-
-	int rez = kill ( pid, sig );
-	switch(rez)
+	do
 	{
-	case EINVAL:	// invalid signal
-	    cerr << "Invalid signal: " << sig;
-	    break;
-	case ESRCH:	// pid  does not exist	
-	    cerr << "Invalid pid: " << pid;    
-	    break;
-	case -1:
-	    cerr << "Process does not exist: " << pid;    
-	    break;                             	
-	case EPERM:	// pid  does not have permission
-	    cerr << "U have no permissions: ";	    
-	    break;                            	
-	default:
-	    break;
+		printf("sh >");
+		fflush (stdout);
+
+		if( !fgets(buf, BUF_SIZE, stdin) )	break;
+		
+		sprintf(cmdline, "/bin/bash -c \"%s\"", buf);
+		rc= system (cmdline);
 	}
-    }
-    cout << endl;
-    return 0;
+	while (!rc);
+
+	return rc;	
 }
