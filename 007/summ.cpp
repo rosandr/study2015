@@ -1,53 +1,77 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-#include <signal.h>
+#include <unistd.h>
 #include <error.h>
-#include <asm-generic/errno-base.h>
+#include <errno.h>
+//#include <asm-generic/errno-base.h>
+#include <pthread.h>
 
 #include <iostream>
 using namespace std;
 #define BUF_SIZE 80
 
+typedef struct param
+{
+    double left;
+    double righg;
+}Param;
+
+
+void* run(void* arg)
+{
+    sleep(5);
+    return 0;
+}
+
+
+void usage (char* name)
+{
+    printf("\nUsage:\t%s N n\n", name);
+    printf("\tN - period, [1-64],\n\tn - sample number [1-64].\n");
+}
+
+
 int main(int argc, char** argv, char** env)
 {
+    pthread_t thread;
+    int ret;
+    
     if (argc <3)
     {
-	printf("\nUsage:\t%s pid sig\n", basename(argv[0]));
-	printf("\tpid - process ID,\n\tsig - signal number [1-32].\n");
+	usage(basename(argv[0]));
 	return 0;
     }
 
-    int pid = atoi (argv[1]);
-    int sig = atoi (argv[2]);
+    int period = atoi (argv[1]);
+    int sample = atoi (argv[2]);
 
-    printf("U sure signal=%d to be sent to process=%d (y/n)?...", sig, pid);
-    int ch = fgetc(stdin);
-
-    if( ch=='y')
+    if ((period <= 0) || (sample <= 0))
     {
-	// printf("%d  y=%d  n=%d", ch, 'y', 'n');
-
-	int rez = kill ( pid, sig );
-	switch(rez)
-	{
-	case EINVAL:	// invalid signal
-	    cerr << "Invalid signal: " << sig;
-	    break;
-	case ESRCH:	// pid  does not exist	
-	    cerr << "Invalid pid: " << pid;    
-	    break;
-	case -1:
-	    cerr << "Process does not exist: " << pid;    
-	    break;                             	
-	case EPERM:	// pid  does not have permission
-	    cerr << "U have no permissions: ";	    
-	    break;                            	
-	default:
-	    break;
-	}
+	usage(basename(argv[0]));
+	return 0;
     }
+
+    if ((period > 64) || (sample > 64))
+    {
+	usage(basename(argv[0]));
+	return 0;
+    }
+
+
+    //Param* param = new Param;
+    Param param;
+    ret = pthread_create(&thread, NULL, run, &param);
+    if(ret)
+    {
+	errno=ret;
+	perror("pthread_create");
+	return -1;
+    }
+
+    pthread_join(thread, NULL);
+
+
     cout << endl;
     return 0;
 }
