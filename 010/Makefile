@@ -1,14 +1,14 @@
 #========================================================================
 #  *** Main Defines ***
 #
-TARGET = mychat
+TARGET = tie-tie
 LIBTRG = hello
 #========================================================================
 #  *** Sources And Paths ***
 #
 
 #put your C source files here
-SRC = mychat.cpp
+SRC = tie-tie.cpp
 
 #put your library  source files here
 LIBSRC = printhello.c printhello2.c
