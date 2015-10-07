@@ -20,7 +20,7 @@ LIBSRC = printhello.c printhello2.c
 #LIBS = -L/usr/lib/mysql
 #LIBS = -L/home/study/tmp/study2015
 #LIBS = -L. -l$(LIBTRG)
-LIBS = -pthread
+LIBS = -pthread -lm
 
 #additional includes to compile
 #INC =-I/usr/include/mysql-I$(KERNELDIR)/include

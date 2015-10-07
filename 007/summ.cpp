@@ -6,6 +6,7 @@
 #include <errno.h>
 //#include <asm-generic/errno-base.h>
 #include <pthread.h>
+#include <math.h>
 
 #include <iostream>
 using namespace std;
@@ -27,7 +28,9 @@ void* run(void* arg)
 	Param* par = (Param*)arg;
 	double delta = (par->right-par->left);
 	double abs = (par->right+par->left)/2;
-	par->result= delta*abs;	// y=x
+
+//	par->result= delta*abs;	// y=x
+	par->result= delta*sin(abs);	// y=sine(x)
 	//printf("%e  %e  %e\n",par->left, par->right, par->result);
     return 0;
 }
@@ -36,20 +39,26 @@ void* run(void* arg)
 void usage (char* name)
 {
     printf("\nUsage:\t%s N n\n", name);
-    printf("\tN - interval, [1-64],\n\tn - sample number [1-64].\n");
+    printf("\tN - interval, [double, positive],\n\tn - sample number [1-64].\n");
+    printf("Example: %s 3.14 20\n", name);
 }
 
 
 int main(int argc, char** argv, char** env)
 {
+    char *endprt;
     if (argc <3)
     {
 	usage(basename(argv[0]));
 	return 0;
     }
 
-    int interval = atoi (argv[1]);
+    double interval = strtod (argv[1], &endprt);
     int sample = atoi (argv[2]);
+
+
+printf("%e\n", interval);
+
 
     if ((interval <= 0) || (sample <= 0))
     {
@@ -57,7 +66,7 @@ int main(int argc, char** argv, char** env)
 		return 0;
     }
 
-    if ((interval > 64) || (sample > 64))
+    if ((endprt == argv[1]) || (sample > 64))
     {
 	usage(basename(argv[0]));
 	return 0;
@@ -95,8 +104,8 @@ int main(int argc, char** argv, char** env)
 		delete paramList[i];
 	}
 
-	cout << "function Y=X, interval [0-" << interval << "], sample count=" <<sample <<endl;
-	cout << "integral="<<totalSum <<endl;
+	cout << "\tfunction y=SINE(x), interval [0 - " << interval << "], sample count=" <<sample <<endl;
+	cout << "\tintegral="<<totalSum <<endl;
 
     return 0;
 }
