@@ -56,10 +56,6 @@ int main(int argc, char** argv, char** env)
     double interval = strtod (argv[1], &endprt);
     int sample = atoi (argv[2]);
 
-
-printf("%e\n", interval);
-
-
     if ((interval <= 0) || (sample <= 0))
     {
 		usage(basename(argv[0]));
