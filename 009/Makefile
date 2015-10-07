@@ -1,14 +1,14 @@
 #========================================================================
 #  *** Main Defines ***
 #
-TARGET = tie-tie
+TARGET = piperead
 LIBTRG = hello
 #========================================================================
 #  *** Sources And Paths ***
 #
 
 #put your C source files here
-SRC = tie-tie.cpp
+SRC = piperead.cpp
 
 #put your library  source files here
 LIBSRC = printhello.c printhello2.c
