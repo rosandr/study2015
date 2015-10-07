@@ -15,34 +15,30 @@ using namespace std;
 
 void usage (char* name)
 {
-    printf("\nUsage:\t%s N n\n", name);
-    printf("\tN - interval, [1-64],\n\tn - sample number [1-64].\n");
+    printf("\nUsage:\t%s <bash command>\n", name);
+    printf("Example: %s cat /proc/meminfo\n", name);
 }
 
 
 int main(int argc, char** argv, char** env)
 {
-/*
-    if (argc <3)
+
+    if (argc <2)
     {
 	usage(basename(argv[0]));
 	return 0;
     }
-*/
-	char cmd[BUF_SIZE];
-	cmd[0]=0;
-	char str[BUF_SIZE];
-/*
-for(int i=0; i<argc; i++)
-	//strcpy(cmd, argv[i]);
-{
-sprintf(cmd, "%s ", argv[i]);
-cmd+=strlen(argv[i]);
 
-}
-printf("%s\n", cmd);
-*/
-	FILE* fd = popen ("ls -la", "r");
+	char str[BUF_SIZE];
+	char* to = str;
+
+	for(int i=1; i<argc; i++)
+	{
+	    to = stpcpy(to, argv[i]);
+	    to = stpcpy(to, " ");
+	}
+
+	FILE* fd = popen (str, "r");
 	while( fgets(str, BUF_SIZE, fd ) != NULL)
 	{
 		int len = strlen(str);
