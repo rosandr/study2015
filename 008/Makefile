@@ -1,14 +1,14 @@
 #========================================================================
 #  *** Main Defines ***
 #
-TARGET = piperead
+TARGET = threadtree
 LIBTRG = hello
 #========================================================================
 #  *** Sources And Paths ***
 #
 
 #put your C source files here
-SRC = piperead.cpp
+SRC = threadtree.cpp
 
 #put your library  source files here
 LIBSRC = printhello.c printhello2.c
@@ -20,7 +20,7 @@ LIBSRC = printhello.c printhello2.c
 #LIBS = -L/usr/lib/mysql
 #LIBS = -L/home/study/tmp/study2015
 #LIBS = -L. -l$(LIBTRG)
-LIBS = -pthread
+LIBS =
 
 #additional includes to compile
 #INC =-I/usr/include/mysql-I$(KERNELDIR)/include
