@@ -9,40 +9,39 @@
 
 using namespace std;
 
-int getPPid( int pid )
+int printTList( int pid )
 {
-    int ret=-1;
-    char file_name[BUF_SIZE];
+    int ret=-1, tpid;
+    char dir_name[BUF_SIZE];
+    DIR* p_dir;
+    
+    sprintf(dir_name, "/proc/%d/task", pid);
+    p_dir = opendir( dir_name);
 
-    sprintf(file_name, "/proc/%d/status", pid);
-
-    FILE* fd = fopen(file_name, "r");
-    if (fd == NULL)
+    struct dirent* dp = readdir(p_dir);
+    while(dp)
     {
-		perror("open file");
-		return -1;
-    }
-
-    char buff[BUF_SIZE];
-
-    while( fgets( buff, BUF_SIZE, fd ) != NULL )
-    {
-        if ( strstr ( buff, "PPid:") == NULL)
-	    	continue;
+	tpid = strtol(dp->d_name, NULL, 10);
+	if(tpid>0)
+	{
+        	if (tpid==pid)	//	(errno != ERANGE)
+		    printf("%d - main task\n", pid);
 		else
-			ret= atoi (buff+5);
-		break;
+		    printf( "  |-%d\n", tpid);
+	}
+	dp = readdir(p_dir);
+	//cout << endl;
     }
-    fclose(fd);
+    closedir(p_dir);
     return ret;
 }
 
 
 int main(int argc, char** argv, char** env)
 {
-    int pid=1, ppid=1;
+	int pid=1;
 
-    if (argc <2)
+	if (argc <2)
 	{
 		DIR* p_dir;
 		p_dir = opendir("/proc");
@@ -52,33 +51,17 @@ int main(int argc, char** argv, char** env)
 		{
 			pid = strtol(dp->d_name, NULL, 10);
 			if (pid>0)	//	(errno != ERANGE)
-			{
-				printf("%d", pid);
-
-				while( (ppid=getPPid(pid))>0)
-				{
-					printf(" -> %d", ppid);
-					pid=ppid;
-				}
-			}
+				printTList(pid);
 			dp = readdir(p_dir);
     		cout << endl;
 		}
 		closedir(p_dir);
 	}
-    else
+	else
 	{
 		pid = atoi (argv[1]);
-
-		printf("%d ", pid);
-
-		while( (ppid=getPPid(pid))>0)
-		{
-			printf(" -> %d", ppid);
-			pid=ppid;
-		}
+		printTList(pid);
 	}
-    cout << endl;
-    //printf("\n");
-    return 0;
+	cout << endl;
+	return 0;
 }
