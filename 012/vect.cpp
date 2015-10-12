@@ -4,9 +4,8 @@
 #include <unistd.h>
 #include <error.h>
 #include <errno.h>
-//#include <asm-generic/errno-base.h>
 #include <pthread.h>
-#include <math.h>
+#include <signal.h>
 
 #include <iostream>
 #include <vector>
@@ -14,25 +13,49 @@ using namespace std;
 
 #define BUF_SIZE 80
 
+//-------------------------------------------------------------------------
 typedef struct param
 {
     pthread_t* thread;
 }Param;
 
-	vector<int> vector;
+int num=0;
+vector<int> Vector;
+int _abort=0;
+pthread_mutex_t mutex;
 
-	int _abort=0;
+void sigint_handler(int sig) { _abort=1; }
 
-void* wrun(void* arg)
+void* wrrun(void* arg)
 {
-    //sleep(1);
-	//Param* par = (Param*)arg;
-	//double delta = (par->right-par->left);
-	//double abs = (par->right+par->left)/2;
+	while(!_abort)
+	{
+		int r = rand();
+		pthread_mutex_lock (&mutex);
+		if( Vector.size()<num )
+		{
+			Vector.push_back(r);
+			//cout << "	value <"<< r << ">  added to vector" <<endl;
+			//usleep(100000);
+		}
+		pthread_mutex_unlock (&mutex);
+	}
+    return 0;
+}
 
-//	par->result= delta*abs;	// y=x
-	//par->result= delta*sin(abs);	// y=sine(x)
-	//printf("%e  %e  %e\n",par->left, par->right, par->result);
+void* rdrun(void* arg)
+{
+	while(!_abort)
+	{
+		pthread_mutex_lock (&mutex);
+		if( !Vector.empty() )
+		{
+			//cout << "	value <"<< Vector.at(0) << ">  removed from vector" <<endl;
+			Vector.erase(Vector.begin());
+			//usleep(100000);
+		}
+		pthread_mutex_unlock (&mutex);
+	}
     return 0;
 }
 
@@ -47,78 +70,64 @@ void usage (char* name)
 
 int main(int argc, char** argv, char** env)
 {
-    char *endprt;
-    if (argc <3)
-    {
-	usage(basename(argv[0]));
-	return 0;
-    }
+	if (argc <4)
+	{
+	    usage(basename(argv[0]));
+	    return 0;
+	}
 
 	int wrnum = atoi(argv[1]);
-	int rdnum = atoi(argv[2]);	
-	int num = atoi(argv[3]);
+	int rdnum = atoi(argv[2]);
+	num = atoi(argv[3]);
 
-    if ((wrnum <= 0) || (rdnum <= 0) || (num<0) )
-    {
+	if ((wrnum <= 0) || (rdnum <= 0) || (num<0) )
+	{
 		usage(basename(argv[0]));
 		return 0;
-    }
+	}
 
+	srand(1000);
+	pthread_mutex_init (&mutex, NULL);
+	
+        static struct sigaction act;
+	act.sa_handler = sigint_handler;
+	sigaction(SIGINT, &act, NULL);		// ^C
 
 	Param* wrlist = (Param*)calloc(wrnum, sizeof(Param));
-	int ret;
-
 	for (int i=0; i<wrnum; i++)
 	{
     		pthread_t* thread = new pthread_t;
 		Param par;
-		par.thread=pthread_t;
-
-    		//ret = pthread_create(thread, NULL, wrun, NULL);
+		par.thread=thread;
+		wrlist[i]=par;
+    		pthread_create(thread, NULL, wrrun, NULL);
 	}
 
-
-
-
-
-
-
-
-/*
-	Param* paramList[64]; 
-    int ret;
-
-	for (int i=0; i<sample; i++)
+	Param* rdlist = (Param*)calloc(rdnum, sizeof(Param));
+	for (int i=0; i<rdnum; i++)
 	{
-    	pthread_t* thread = new pthread_t;
-	paramList[i]= new Param;
-	paramList[i]->left=((double)interval/sample)*i;
-	paramList[i]->right=((double)interval/sample)*(i+1);
-
-    	ret = pthread_create(thread, NULL, run, paramList[i]);
-    	if(ret)
-    	{
-		errno=ret;
-		perror("pthread_create");
-		return -1;
-    	}
-    		//pthread_join(thread, NULL);
-		paramList[i]->thread=thread;
+    		pthread_t* thread = new pthread_t;
+		Param par;
+		par.thread=thread;
+		rdlist[i]=par;
+    		pthread_create(thread, NULL, rdrun, NULL);
 	}
 
-	for (int i=0; i<sample; i++)
-		pthread_join( *(paramList[i]->thread), NULL);
-
-	double totalSum=0;
-	for (int i=0; i<sample; i++)
+	// main loop
+	while(!_abort)
 	{
-		totalSum+=paramList[i]->result;
-		delete paramList[i]->thread;
-		delete paramList[i];
+		cout << "vector contains  " << Vector.size() << " elements"  <<endl;
+		usleep(100000);
 	}
 
-	cout << "\tfunction y=SINE(x), interval [0 - " << interval << "], sample count=" <<sample <<endl;
-	cout << "\tintegral="<<totalSum <<endl;
-*/
-    return 0;
+	// finishing...
+	for (int i=0; i<wrnum; i++)
+		pthread_join( *(wrlist[i].thread), NULL);
+
+	for (int i=0; i<rdnum; i++)
+		pthread_join( *(rdlist[i].thread), NULL);
+
+	free(wrlist);
+	free(rdlist);
+        return 0;
 }
