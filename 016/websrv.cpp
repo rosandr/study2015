@@ -15,7 +15,7 @@
 
 #include <iostream>
 using namespace std;
-#define BUF_SIZE 256
+#define BUF_SIZE 1256
 
 void usage (char* name)
 {
@@ -38,25 +38,28 @@ pthread_t thread1, thread2;
 void sigint_handler(int sig) 
 {
 	pthread_cancel(thread1);
-	pthread_cancel(thread2);
- }
+//	pthread_cancel(thread2);
+}
 
 void* run1 (void* arg)
 {
 	Param* par = (Param*)arg;
-	
+
 	char buf[BUF_SIZE];
 	buf[0]=0;
         sockaddr_in fromaddr;
         socklen_t ln=sizeof(fromaddr);
 
-	printf("Please, type your message...\n");
+	int s = accept(par->sock, (sockaddr*)(&fromaddr), &ln);
+	if(s>0)
+	    printf("Accept new connection\n");
+
 	while(1)
 	{
-        	int nb=recvfrom(par->sock, buf, BUF_SIZE, 0, (sockaddr*)&fromaddr, &ln);
+		int nb=recv(s, buf, BUF_SIZE, 0);
 		if (nb <=0)	break;
 		buf[nb]=0;
-		printf(">> %s\n",buf);
+		printf("%s \n", buf);
 	}
 	return 0;
 }
@@ -64,7 +67,7 @@ void* run1 (void* arg)
 void* run2 (void* arg)
 {
 	Param* par = (Param*)arg;
-	
+
 	char buf[BUF_SIZE];
 	buf[0]=0;
         while( fgets(buf, BUF_SIZE, stdin) !=NULL )
@@ -88,7 +91,7 @@ int main(int argc, char** argv, char** env)
 	}
 
 	localport =  atoi(argv[1]);
-	if((localport<32675)||(localport>64000))
+	if((localport<9999)||(localport>64000))
 		usage(basename(argv[0]));
 
         static struct sigaction act;
@@ -96,12 +99,12 @@ int main(int argc, char** argv, char** env)
 	sigaction(SIGINT, &act, NULL);		// ^C
 
 	//----------------------------------------------------------
-	int s=socket( AF_INET, SOCK_DGRAM, 0 );
+	int s=socket( AF_INET, SOCK_STREAM, 0 );
 
 	struct sockaddr_in inaddr;
 	memset(&inaddr, 0, sizeof(inaddr));
 	inaddr.sin_family = AF_INET;
-	inaddr.sin_addr.s_addr = htonl((in_addr_t) INADDR_BROADCAST);
+	inaddr.sin_addr.s_addr = htonl((in_addr_t) INADDR_ANY);
 	inaddr.sin_port = htons(localport);
 
         while( bind(s, (struct sockaddr*)&inaddr, sizeof(inaddr)) < 0)
@@ -111,17 +114,23 @@ int main(int argc, char** argv, char** env)
 		usleep(100000);
 	}
 
+	if(listen(s, 10)<0)
+	{
+	    perror("listen");
+	    exit(1);
+	}
+
 	par.sock = s;
 	par.inaddr = &inaddr;
 //	par.outaddr = &outaddr;
 
 	//----------------------------------------------------------
 	pthread_create( &thread1, NULL, run1, &par);
-	pthread_create( &thread2, NULL, run2, &par);
+//	pthread_create( &thread2, NULL, run2, &par);
 
 	void* res;
 	pthread_join( thread1, &res);
-	pthread_join( thread2, &res);
+//	pthread_join( thread2, &res);
 
 	close(s);
 	return 0;
