@@ -15,12 +15,12 @@
 
 #include <iostream>
 using namespace std;
-#define BUF_SIZE 1256
+#define BUF_SIZE 3096
 
 void usage (char* name)
 {
 	printf("\nUsage:\t%s localport\n", name);
-	printf("\tlocalport  - local port number  [32675 - 64000],\n");
+	printf("\tlocalport  - local port number  [10000 - 64000],\n");
 	printf("Example: ./%s 42443   // in one host,\n", name);
 	printf("         ./%s 42443   // in another host\n", name);
 }
@@ -32,7 +32,6 @@ typedef struct param
     struct sockaddr_in* outaddr;
 }Param;
 
-
 pthread_t thread1;
 void sigint_handler(int sig) 
 {
@@ -41,36 +40,42 @@ void sigint_handler(int sig)
 
 void* run1 (void* arg)
 {
-    int s;
+    int sock;
     Param* par = (Param*)arg;
 
     char buf[BUF_SIZE];
-    buf[0]=0;
+    //buf[0]=0;
     sockaddr_in fromaddr;
     socklen_t ln=sizeof(fromaddr);
 
-    FILE* fd = fopen("index.html", "r");
-    if (fd<0)
+    FILE* fd =  fopen("index.html", "r");
+    FILE* fd1 = fopen("i.jpeg", "r");
+    
+    if ((fd<0) || (fd1<0))
     {
         perror("open");
         return 0;
     }
+    
+    fseek(fd, 0, SEEK_END);
+    long fdsize = ftell(fd);
 
-
+    fseek(fd1, 0, SEEK_END);
+    long fd1size = ftell(fd1);
 
     while(1)
     {
-	s = accept(par->sock, (sockaddr*)(&fromaddr), &ln);
-	if( s<= 0)
+	sock = accept(par->sock, (sockaddr*)(&fromaddr), &ln);
+	if( sock<= 0)
 	{
 	    perror("accept");
 	    break;
 	}
 
-        int nb=recv(s, buf, BUF_SIZE, 0);
+        int nb=recv(sock, buf, BUF_SIZE, 0);
         if (nb <=0)	break;
         buf[nb]=0;
-        printf("%s \n", buf);
+        //printf("%s \n", buf);
 
 	char str[120];
 	sscanf(buf, "%s %s", str, str);
@@ -89,26 +94,43 @@ void* run1 (void* arg)
 	}
 	else
 	{
-	    to = buf;
-	    to=stpcpy(to, "HTTP/1.1 200 OK\n");
-	    to=stpcpy(to, "Connection: keep-alive\n");
-	    to=stpcpy(to, "Content-Type: text/html; charset=UTF-8\n");
-	    to=stpcpy(to, "Keep-Alive: timeout=5,max=97\n");
-	    to=stpcpy(to, "\n");
-
-	    while( fgets(str, 120, fd)>0 )
+	    int n = strcmp(to, "i.jpeg");
+	    if(n==0)
 	    {
-		to=stpcpy(to, str);
+		to = buf;
+		fseek(fd1, 0, SEEK_SET);
+		to=stpcpy(to, "HTTP/1.1 200 OK\n");
+		to=stpcpy(to, "Connection: keep-alive\n");
+		to=stpcpy(to, "Content-Type: image/jpeg\n");
+		to=stpcpy(to, "Keep-Alive: timeout=5,max=97\n");
+		to=stpcpy(to, "\n");
+		nb=fread (to, fd1size, 1, fd1);
+		if (nb <=0)	break;
+		to+=fd1size;
 	    }
-	    to=stpcpy(to, "\n");
+	    else
+	    {
+		to = buf;
+		fseek(fd, 0, SEEK_SET);
+		to=stpcpy(to, "HTTP/1.1 200 OK\n");
+		to=stpcpy(to, "Connection: keep-alive\n");
+		to=stpcpy(to, "Content-Type: text/html; charset=UTF-8\n");
+		to=stpcpy(to, "Keep-Alive: timeout=5,max=97\n");
+		to=stpcpy(to, "\n");
+		nb=fread (to, fdsize, 1, fd);
+		if (nb <=0)	break;
+		to+=fdsize;
+	    }
 	}
-//printf("%s \n", to);
+	to=stpcpy(to, "\n");
 
-	send(s, buf, to-buf, 0);
-	close(s);
+	send(sock, buf, to-buf, 0);
+	shutdown(sock, SHUT_RDWR);
+	close(sock);
     }
     fclose(fd);
-    shutdown(s, SHUT_RDWR);
+    fclose(fd1);
+    
     return 0;
 }
 
@@ -163,6 +185,7 @@ int main(int argc, char** argv, char** env)
 	void* res;
 	pthread_join( thread1, &res);
 
+//	shutdown(s, SHUT_RDWR);
 	close(s);
 	return 0;
 }
