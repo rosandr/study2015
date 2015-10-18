@@ -24,41 +24,38 @@ void usage (char* name)
 {
     printf("\nUsage:\t%s localport\n", name);
     printf("\tlocalport  - local port number  [10000 - 64000],\n");
-    printf("Example: ./%s 42443   // in one host,\n", name);
-    printf("         ./%s 42443   // in another host\n", name);
+    printf("Example: ./%s 10000   // in one host,\n", name);
 }
 
 typedef struct param
 {
     int socket;
     struct sockaddr_in addr;
-    pthread_t* thread;
-}Param;
-
-
-list<Param*> clientList;
-
+    pthread_t thread;
+}Client;
 
 int sock;
+list<Client*> clientList;
+
 void sigint_handler(int sig)
 {
+    printf("Start delete clients. Total: %d\n", clientList.size() );
     while (!clientList.empty())
     {
-        Param* par=clientList.back();
+        Client* cln=clientList.back();
 
         void* res;
-        pthread_cancel(*par->thread);
-        pthread_join( *par->thread, &res);
+        pthread_cancel(cln->thread);
+        pthread_join(  cln->thread, &res);
 
         if (res == PTHREAD_CANCELED)
-            printf(" thread was canceled from sig_handler\n");
+            printf("thread was canceled from sig_handler\n");
         else
             printf("thread wasn't canceled\n");
 
-        close(par->socket);
-        delete par->thread;
-        delete par;
-
+        shutdown(cln->socket, SHUT_RDWR);
+        close(cln->socket);
+        delete cln;
         clientList.pop_back();
     }
 
@@ -70,20 +67,31 @@ void sigint_handler(int sig)
 void* run (void* arg)
 {
     char buf[BUF_SIZE];
-    Param* par = (Param*)arg;
+    Client* client = (Client*)arg;
 
+printf("new client started. Total: %d\n", clientList.size() );
     while(1)
     {
-        int nb=recv(par->socket, buf, BUF_SIZE, 0);
+        int nb=recv(client->socket, buf, BUF_SIZE, 0);
         if (nb <=0)	break;
         buf[nb]=0;
 
-    }
+printf("%s \n", buf);
 
-    close(par->socket);
-    delete par->thread;
-    clientList.remove(par);
-    delete par;
+//printf("%d \n", nb);
+
+
+
+
+
+    }
+    shutdown(client->socket, SHUT_RDWR);
+    close(client->socket);
+    clientList.remove(client);
+
+    printf("client deleted. Remine: %d\n", clientList.size() );
+
+    delete client;
     return 0;
 }
 
@@ -141,103 +149,37 @@ int main(int argc, char** argv, char** env)
             break;
         }
 
-
         //----------------------------------------------------------
         // have new connection:
-        printf("new client accepted\n");
-
-        Param* par = new Param;
-        par->socket = sock;
-        par->addr = fromaddr;
-        par->thread = new pthread_t;
+        Client* client = new Client;
+        client->socket = sock;
+        client->addr = fromaddr;
 
         //----------------------------------------------------------
-        if( 0!=pthread_create( par->thread, NULL, run, par) )
+        if( 0!=pthread_create( &client->thread, NULL, run, client) )
         {
             perror("pthread_create");
             break;
         }
-        clientList.push_back(par);
-
-
-
-        /*
-        int nb=recv(sock, buf, BUF_SIZE, 0);
-        if (nb <=0)	break;
-        buf[nb]=0;
-        //printf("%s \n", buf);
-
-        char str[120];
-        sscanf(buf, "%s %s", str, str);
-
-        char* to = str+1;
-        if(strlen(to)==0)	to="index.html";
-
-        if (access(to, F_OK) == -1)
-        {
-            to = buf;
-            to=stpcpy(to, "HTTP/1.1 404 Not Found\n");
-            to=stpcpy(to, "Connection: keep-alive\n");
-            to=stpcpy(to, "Content-Type: text/html; charset=UTF-8\n");
-            to=stpcpy(to, "Keep-Alive: timeout=5,max=97\n");
-            to=stpcpy(to, "\n");
-            to=stpcpy(to, "Erorr 404 Page not found\n");
-        }
-        else
-        {
-            int n = strcmp(to, "i.jpeg");
-            if(n==0)
-            {
-            to = buf;
-            fseek(fd1, 0, SEEK_SET);
-            to=stpcpy(to, "HTTP/1.1 200 OK\n");
-            to=stpcpy(to, "Connection: keep-alive\n");
-            to=stpcpy(to, "Content-Type: image/jpeg\n");
-            to=stpcpy(to, "Keep-Alive: timeout=5,max=97\n");
-            to=stpcpy(to, "\n");
-            nb=fread (to, fd1size, 1, fd1);
-            if (nb <=0)	break;
-            to+=fd1size;
-            }
-            else
-            {
-            to = buf;
-            fseek(fd, 0, SEEK_SET);
-            to=stpcpy(to, "HTTP/1.1 200 OK\n");
-            to=stpcpy(to, "Connection: keep-alive\n");
-            to=stpcpy(to, "Content-Type: text/html; charset=UTF-8\n");
-            to=stpcpy(to, "Keep-Alive: timeout=5,max=97\n");
-            to=stpcpy(to, "\n");
-            nb=fread (to, fdsize, 1, fd);
-            if (nb <=0)	break;
-            to+=fdsize;
-            }
-        }
-        to=stpcpy(to, "\n");
-
-        send(sock, buf, to-buf, 0);
-        //shutdown(sock, SHUT_RDWR);
-        close(sock);*/
+        clientList.push_back(client);
+        //printf("new client accepted. Total: %d\n", clientList.size() );
     }
-
 
     while (!clientList.empty())
     {
-        Param* par=clientList.back();
+        Client* client=clientList.back();
 
         void* res;
-        pthread_cancel(*par->thread);
-        pthread_join( *par->thread, &res);
+        pthread_cancel(client->thread);
+        pthread_join( client->thread, &res);
 
         if (res == PTHREAD_CANCELED)
             printf(" thread was canceled\n");
         else
             printf("thread wasn't canceled\n");
 
-        close(par->socket);
-        delete par->thread;
-        delete par;
-
+        close(client->socket);
+        delete client;
         clientList.pop_back();
     }
 
