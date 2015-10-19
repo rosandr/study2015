@@ -34,8 +34,9 @@ typedef struct param
     pthread_t thread;
 }Client;
 
-int sock;
+int s;
 list<Client*> clientList;
+list<char*> messageList;
 
 void sigint_handler(int sig)
 {
@@ -50,8 +51,6 @@ void sigint_handler(int sig)
 
         if (res == PTHREAD_CANCELED)
             printf("thread was canceled from sig_handler\n");
-        else
-            printf("thread wasn't canceled\n");
 
         shutdown(cln->socket, SHUT_RDWR);
         close(cln->socket);
@@ -59,7 +58,13 @@ void sigint_handler(int sig)
         clientList.pop_back();
     }
 
-    close(sock);
+    close(s);
+
+    list<char*>::iterator it=messageList.begin();
+    for ( ; it!=messageList.end(); ++it)
+        free(*it);
+
+    close(s);
     exit(0);
 }
 
@@ -68,29 +73,76 @@ void* run (void* arg)
 {
     char buf[BUF_SIZE];
     Client* client = (Client*)arg;
+    int s=client->socket;
 
 printf("new client started. Total: %d\n", clientList.size() );
     while(1)
     {
-        int nb=recv(client->socket, buf, BUF_SIZE, 0);
+        fflush(0);
+        int nb=recv(s, buf, BUF_SIZE, 0);
         if (nb <=0)	break;
         buf[nb]=0;
 
-printf("%s \n", buf);
+        switch (buf[0])
+        {
+        case '1':
+            goto exit;
+        case '2':
+            if(buf[1]=='&')
+            {
+                char* to = buf;
+                to=stpcpy(to, "Last 10 messages:\n");
 
-//printf("%d \n", nb);
+                list<char*>::iterator it=messageList.begin();
+                for ( ; it!=messageList.end(); ++it)
+                {
+                    to=stpcpy(to, *it);
+                }
 
 
+                //to=stpcpy(to, "1. hello? Jack!\n");
+                //to=stpcpy(to, "2. Hi, Sally.\n");
 
 
+                nb = send(s, buf, to-buf, 0);
+            }
+            break;
+
+        case '3':
+            if(buf[1]=='&')
+            {
+                // chat to all
+                list<Client*>::iterator it=clientList.begin();
+                for ( ; it!=clientList.end(); ++it)
+                {
+                    if( (*it)->socket == s) continue;
+                    nb = send( (*it)->socket, buf+2, strlen(buf)-2, 0);
+                }
+
+                char* msg=(char*) malloc(128);
+                nb = 128<=strlen(buf)-2?128:strlen(buf)-2;
+
+                if(nb>0)
+                {
+                    memcpy(msg, buf+2, nb );
+                    if(messageList.size()>=10)
+                        messageList.pop_front();
+                    messageList.push_back(msg);
+                }
+            }
+            break;
+
+        default:
+            break;
+        }
 
     }
-    shutdown(client->socket, SHUT_RDWR);
-    close(client->socket);
+exit:
+    shutdown(s, SHUT_RDWR);
+    close(s);
     clientList.remove(client);
 
     printf("client deleted. Remine: %d\n", clientList.size() );
-
     delete client;
     return 0;
 }
@@ -108,14 +160,17 @@ int main(int argc, char** argv, char** env)
 
     localport =  atoi(argv[1]);
     if((localport<9999)||(localport>64000))
-    usage(basename(argv[0]));
+    {
+        usage(basename(argv[0]));
+        return 0;
+    }
 
     static struct sigaction act;
     act.sa_handler = sigint_handler;
     sigaction(SIGINT, &act, NULL);		// ^C
 
     //----------------------------------------------------------
-    int s=socket( AF_INET, SOCK_STREAM, 0 );
+    s=socket( AF_INET, SOCK_STREAM, 0 );
 
     struct sockaddr_in inaddr;
     memset(&inaddr, 0, sizeof(inaddr));
@@ -142,7 +197,7 @@ int main(int argc, char** argv, char** env)
 
     while(1)
     {
-        sock = accept(s, (sockaddr*)(&fromaddr), &ln);
+        int sock = accept(s, (sockaddr*)(&fromaddr), &ln);
         if( sock<= 0)
         {
             perror("accept");
@@ -165,6 +220,8 @@ int main(int argc, char** argv, char** env)
         //printf("new client accepted. Total: %d\n", clientList.size() );
     }
 
+    sigint_handler(12);
+/*
     while (!clientList.empty())
     {
         Client* client=clientList.back();
@@ -175,8 +232,6 @@ int main(int argc, char** argv, char** env)
 
         if (res == PTHREAD_CANCELED)
             printf(" thread was canceled\n");
-        else
-            printf("thread wasn't canceled\n");
 
         close(client->socket);
         delete client;
@@ -184,5 +239,6 @@ int main(int argc, char** argv, char** env)
     }
 
     close(s);
+*/
     return 0;
 }
