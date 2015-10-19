@@ -232,24 +232,5 @@ int main(int argc, char** argv, char** env)
     }
 
     sigint_handler(12);
-/*
-    while (!clientList.empty())
-    {
-        Client* client=clientList.back();
-
-        void* res;
-        pthread_cancel(client->thread);
-        pthread_join( client->thread, &res);
-
-        if (res == PTHREAD_CANCELED)
-            printf(" thread was canceled\n");
-
-        close(client->socket);
-        delete client;
-        clientList.pop_back();
-    }
-
-    close(s);
-*/
     return 0;
 }
