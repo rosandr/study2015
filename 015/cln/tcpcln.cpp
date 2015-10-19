@@ -76,7 +76,6 @@ void* run (void* arg)
 
 int main(int argc, char** argv, char** env)
 {
-
     struct in_addr ip;
     unsigned short port;
 
@@ -88,13 +87,13 @@ int main(int argc, char** argv, char** env)
 
     if (argc < 3)
     {
-        ip.s_addr = INADDR_ANY;
+        ip.s_addr = htonl(INADDR_ANY);
         port =  atoi(argv[1]);
     }
     else
     {
-        char* ipstr = argv[2];
-        port =  atoi(argv[3]);
+        char* ipstr = argv[1];
+        port = atoi(argv[2]);
 
         if (!inet_aton(ipstr, &ip))
         {
@@ -120,7 +119,7 @@ int main(int argc, char** argv, char** env)
 
     memset(&addr, 0, sizeof(addr));
     addr.sin_family = AF_INET;
-    addr.sin_addr.s_addr = htonl((in_addr_t)ip.s_addr);
+    addr.sin_addr.s_addr = ((in_addr_t)ip.s_addr);
     addr.sin_port = htons(port);
 
     char buf[BUF_SIZE];
