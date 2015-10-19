@@ -22,8 +22,8 @@ void usage (char* name)
 	printf("\nUsage:\t%s localport\n", name);
 	printf("\tlocalport  - local port number  [32675 - 64000],\n");
 	//printf("\tremoteport - remote port number [32675 - 64000].\n");
-	printf("Example: ./%s 42443   // in one host,\n", name);
-	printf("         ./%s 42443   // in another host\n", name);
+    printf("Example: ./%s 10000   // in one host,\n", name);
+    printf("         ./%s 10000   // in another host\n", name);
 }
 
 typedef struct param
@@ -88,10 +88,13 @@ int main(int argc, char** argv, char** env)
 	}
 
 	localport =  atoi(argv[1]);
-	if((localport<32675)||(localport>64000))
+    if((localport<9999)||(localport>64000))
+    {
 		usage(basename(argv[0]));
+        return 0;
+    }
 
-        static struct sigaction act;
+    static struct sigaction act;
 	act.sa_handler = sigint_handler;
 	sigaction(SIGINT, &act, NULL);		// ^C
 
@@ -104,7 +107,10 @@ int main(int argc, char** argv, char** env)
 	inaddr.sin_addr.s_addr = htonl((in_addr_t) INADDR_BROADCAST);
 	inaddr.sin_port = htons(localport);
 
-        while( bind(s, (struct sockaddr*)&inaddr, sizeof(inaddr)) < 0)
+    const int optval = 1;
+    setsockopt(s, SOL_SOCKET, SO_BROADCAST, &optval, sizeof(optval));
+
+    while( bind(s, (struct sockaddr*)&inaddr, sizeof(inaddr)) < 0)
 	{
 		printf(".");
 		fflush(NULL);
