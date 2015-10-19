@@ -135,33 +135,7 @@ printf("new client started. Total: %d\n", clientList.size() );
                 list<Client*>::iterator it=clientList.begin();
                 for ( ; it!=clientList.end(); ++it)
                 {
-
-
-                    /*
-                    in_addr adr1;
-                    in_addr adr2;
-                    adr1.s_addr=inet_addr("124.23.45.67");
-                    adr2.s_addr=inet_addr("as.34.34.56");
-                    if (adr1.s_addr!=INADDR_NONE)
-                        cout << " adr1 correct" << endl;
-                    else
-                        cout << " adr1 incorect " << endl;
-
-                    if (adr2.s_addr!=INADDR_NONE)
-                        cout << " adr2 correct" << endl;
-                    else
-                        cout << " adr2 incorect" << endl;
-
-                    cout << inet_ntoa(adr1) << endl;
-                    cout << inet_ntoa(adr2) << endl;
-                    */
-
-
-
-
-
                     to=stpcpy(to, inet_ntoa((*it)->addr.sin_addr));
-                    //to=stpcpy(to, ":";
                     nb=sprintf(to, ":%d\n", (*it)->addr.sin_port);
                     to+=nb;
                 }
