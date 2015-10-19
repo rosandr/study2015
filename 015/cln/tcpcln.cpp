@@ -33,6 +33,7 @@ void print_menu()
     printf("\t1 - disconnect and exit\n");
     printf("\t2 - get 10 last messages\n");
     printf("\t3 - chat your message to all\n");
+    printf("\t4 - get clients' list\n");
 }
 
 //-------------------------------------------------------------------------
@@ -153,6 +154,7 @@ int main(int argc, char** argv, char** env)
             printf("client exited\n");
             return 0;
         case '2':
+        case '4':
             buf[0]=sel;
             buf[1]='&';
             nb=send( s, buf, 2, 0);

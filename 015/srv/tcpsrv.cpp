@@ -10,7 +10,7 @@
 #include <sys/wait.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-
+#include <arpa/inet.h>
 #include <pthread.h>
 
 #include <iostream>
@@ -98,20 +98,14 @@ printf("new client started. Total: %d\n", clientList.size() );
                 {
                     to=stpcpy(to, *it);
                 }
-
-
-                //to=stpcpy(to, "1. hello? Jack!\n");
-                //to=stpcpy(to, "2. Hi, Sally.\n");
-
-
                 nb = send(s, buf, to-buf, 0);
             }
             break;
 
-        case '3':
+        case '3':       // chat to all
             if(buf[1]=='&')
             {
-                // chat to all
+
                 list<Client*>::iterator it=clientList.begin();
                 for ( ; it!=clientList.end(); ++it)
                 {
@@ -129,6 +123,49 @@ printf("new client started. Total: %d\n", clientList.size() );
                         messageList.pop_front();
                     messageList.push_back(msg);
                 }
+            }
+            break;
+
+        case '4':       // clients list
+            if(buf[1]=='&')
+            {
+                char* to = buf;
+                to=stpcpy(to, "Clients' list:\n");
+
+                list<Client*>::iterator it=clientList.begin();
+                for ( ; it!=clientList.end(); ++it)
+                {
+
+
+                    /*
+                    in_addr adr1;
+                    in_addr adr2;
+                    adr1.s_addr=inet_addr("124.23.45.67");
+                    adr2.s_addr=inet_addr("as.34.34.56");
+                    if (adr1.s_addr!=INADDR_NONE)
+                        cout << " adr1 correct" << endl;
+                    else
+                        cout << " adr1 incorect " << endl;
+
+                    if (adr2.s_addr!=INADDR_NONE)
+                        cout << " adr2 correct" << endl;
+                    else
+                        cout << " adr2 incorect" << endl;
+
+                    cout << inet_ntoa(adr1) << endl;
+                    cout << inet_ntoa(adr2) << endl;
+                    */
+
+
+
+
+
+                    to=stpcpy(to, inet_ntoa((*it)->addr.sin_addr));
+                    //to=stpcpy(to, ":";
+                    nb=sprintf(to, ":%d\n", (*it)->addr.sin_port);
+                    to+=nb;
+                }
+                nb = send(s, buf, to-buf, 0);
             }
             break;
 
