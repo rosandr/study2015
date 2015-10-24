@@ -33,7 +33,6 @@ static int run(void* arg)
     //par->result= delta*abs;	// y=x
     par->result= delta*sin(abs);	// y=sine(x)
     //printf("%e  %e  %e\n",par->left, par->right, par->result);
-    //sleep(10);
     return 0;
 }
 
@@ -98,7 +97,6 @@ int main(int argc, char** argv, char** env)
 	    return -1;
     	}
 	paramList[i]->pid=res;
-	//printf("%d\n", res);
     }
 
     for (int i=0; i<sample; i++)
