@@ -46,6 +46,7 @@ void usage (char* name)
 
 int main(int argc, char** argv, char** env)
 {
+    int status;
     char *endprt;
     if (argc <3)
     {
@@ -101,7 +102,7 @@ int main(int argc, char** argv, char** env)
 
     for (int i=0; i<sample; i++)
     {
-	res = waitpid( paramList[i]->pid, NULL, 0);    // Wait for child
+	res = waitpid( paramList[i]->pid, &status, 0);    // Wait for child
 	//printf("%d\n", res);
     }
     
