@@ -90,7 +90,15 @@ int main(int argc, char** argv, char** env)
 	paramList[i]->right=((double)interval/sample)*(i+1);
 
 	stackTop += STACK_SIZE;
-    	res = clone (run, stackTop, CLONE_VM, paramList[i]);
+			/*
+				from man 2 clone:
+				 The low byte of flags contains the number of the termination signal sent to the parent when the child dies.
+         If this signal is specified as anything other than SIGCHLD, then the parent process must specify the __WALL
+		     or  __WCLONE  options  when waiting for the child with wait(2).  If no signal is specified, then the parent
+		     process is not signaled when the child terminates.
+
+			*/
+    	res = clone (run, stackTop, CLONE_VM | SIGCHLD , paramList[i]);
 
     	if(res == -1)
     	{
@@ -103,7 +111,7 @@ int main(int argc, char** argv, char** env)
     for (int i=0; i<sample; i++)
     {
 	res = waitpid( paramList[i]->pid, &status, 0);    // Wait for child
-	//printf("%d\n", res);
+	printf("%d->%d\n",paramList[i]->pid,  res);
     }
     
     double totalSum=0;
