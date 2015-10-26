@@ -25,7 +25,7 @@ typedef struct param
 
 static int run(void* arg)
 {
-    //sleep(1);
+    sleep(1);
     Param* par = (Param*)arg;
     double delta = (par->right-par->left);
     double abs = (par->right+par->left)/2;
@@ -102,7 +102,7 @@ int main(int argc, char** argv, char** env)
 
     for (int i=0; i<sample; i++)
     {
-	res = waitpid( paramList[i]->pid, &status, 0);    // Wait for child
+	res = waitpid( paramList[i]->pid, &status, __WCLONE);    // Wait for child
 	//printf("%d\n", res);
     }
     
