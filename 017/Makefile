@@ -1,14 +1,14 @@
 #========================================================================
 #  *** Main Defines ***
 #
-TARGET = summ
+TARGET = clone
 LIBTRG = hello
 #========================================================================
 #  *** Sources And Paths ***
 #
 
 #put your C source files here
-SRC = summ.cpp
+SRC = clone.cpp
 
 #put your library  source files here
 LIBSRC = printhello.c printhello2.c
