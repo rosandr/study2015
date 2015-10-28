@@ -1,14 +1,14 @@
 #========================================================================
 #  *** Main Defines ***
 #
-TARGET = websrv
+TARGET = websrvd
 LIBTRG = hello
 #========================================================================
 #  *** Sources And Paths ***
 #
 
 #put your C source files here
-SRC = websrv.cpp
+SRC = websrvd.cpp
 
 #put your library  source files here
 LIBSRC = printhello.c printhello2.c
