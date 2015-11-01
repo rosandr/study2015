@@ -8,7 +8,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
-#include <sys/select.h>
+#include <poll.h>
 
 #include <iostream>
 using namespace std;
@@ -57,23 +57,23 @@ int main(int argc, char** argv, char** env)
     printf("Please, type your message...\n");
 
     int ret, running =1;
-    fd_set rdfs;
+
+    struct pollfd pfd[2];
     char buf[BUF_SIZE];
 
     while(running)
     {
-        FD_ZERO(&rdfs);
+        pfd[0].events = pfd[1].events = POLLIN;
 
-        FD_SET(fd, &rdfs);
-        FD_SET(STDIN_FILENO, &rdfs);
+        pfd[0].fd = fd;
+        pfd[1].fd = STDIN_FILENO;
 
-        if ((ret = select(5, &rdfs, NULL, NULL, NULL)) < 0)
+        if ((ret = poll(pfd, 2, 5000)) == 0)
         {
-            perror("select");
-            running = 0; continue;
+            continue;
         }
 
-        if (FD_ISSET(fd, &rdfs))
+        if( pfd[0].revents & POLLIN )
         {
             int n = read(fd, buf, BUF_SIZE);
             if (n<=0)	break;
@@ -81,7 +81,7 @@ int main(int argc, char** argv, char** env)
             printf(">> %s\n",buf);
         }
 
-        if (FD_ISSET(STDIN_FILENO, &rdfs))
+        if( pfd[1].revents & POLLIN )
         {
             buf[0]=0;
             if( fgets(buf, BUF_SIZE, stdin) !=NULL )
