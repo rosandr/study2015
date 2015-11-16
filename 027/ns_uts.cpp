@@ -9,11 +9,9 @@
 #include <error.h>
 #include <errno.h>
 
-
 #include <iostream>
 using namespace std;
 #define BUF_SIZE 256
-
 
 void usage (char* name)
 {
@@ -34,7 +32,6 @@ int main(int argc, char** argv, char** env)
     }
     newname=argv[1];
 
-
     switch( pid=fork())		// transmiter
     {
 	case -1:
@@ -48,7 +45,6 @@ int main(int argc, char** argv, char** env)
 	    perror("unshare");
 	    exit(EXIT_FAILURE);
 	}
-
 
         struct utsname uts;
 	if (sethostname(newname, strlen(newname)) == -1)
