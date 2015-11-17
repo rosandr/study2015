@@ -1,0 +1,109 @@
+//#define _GNU_SOURCE
+#include <sys/wait.h>
+#include <sys/utsname.h>
+#include <sched.h>
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <error.h>
+#include <errno.h>
+
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <sys/mount.h>
+
+#include <iostream>
+using namespace std;
+#define BUF_SIZE 256
+
+void usage (char* name)
+{
+    printf("\nUsage: %s <child-levels>\n", name);
+}
+
+
+int child_proc(int level)
+{
+    static int first_call = 1;
+
+    if (!first_call)
+    {
+        char mount_point[BUF_SIZE];
+
+        snprintf(mount_point, BUF_SIZE, "./multi_proc%c", (char) ('0' + level));
+        mkdir(mount_point, 0555);
+
+        if (mount("proc", mount_point, "proc", 0, NULL) == -1)
+        {
+            perror("mount");
+            exit(EXIT_FAILURE);
+        }
+    }
+    first_call = 0;
+
+    //----------------------------------------------------
+    if(level>0)
+    {
+        pid_t pid;
+        level--;
+        switch( pid=fork())		// transmiter
+        {
+        case -1:
+            perror("fork");
+            exit(EXIT_FAILURE);
+
+        case 0:
+            if (unshare(CLONE_NEWPID) == -1)
+            {
+                perror("unshare");
+                exit(EXIT_FAILURE);
+            }
+/*
+            char mount_point[BUF_SIZE];
+            sprintf(mount_point, "multi_proc%c", (char)('0'+level) );
+
+            if (mount("proc", mount_point, "proc", 0, NULL) == -1)
+            {
+                perror("mount");
+                exit(EXIT_FAILURE);
+            }
+*/
+            child_proc(level);
+            //umount( mount_point);
+        }
+        if (waitpid(pid, NULL, 0) == -1)
+        {
+            perror("waitpid");
+            exit(EXIT_FAILURE);
+        }
+    }
+    else
+        execlp("sleep", "sleep", "60", (char *) NULL);
+
+    return 0;
+}
+
+
+int main(int argc, char** argv, char** env)
+{
+    if (argc < 2) 
+    {
+        usage(basename(argv[0]));
+        exit(EXIT_FAILURE);
+    }
+    
+
+    int level = atoi( argv[1]);
+    if(level > 5)
+    {
+        usage(basename(argv[0]));
+        exit(EXIT_FAILURE);
+    }
+
+    //-------------------------------------------
+    printf("Caller PID = %ld, level = %d\n",(long int)getpid(), level);
+    child_proc(level);
+
+    exit(EXIT_SUCCESS);
+}
