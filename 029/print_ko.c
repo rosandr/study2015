@@ -1,10 +1,10 @@
 #include <linux/module.h>
-#define NIITM_NAME "niitm hello"
+#define NIITM_NAME "hello to you, my friend"
 
 
 void print_ko(void)
 {
-    printk(KERN_INFO "Loaded %s \n", NIITM_NAME);
+    printk(KERN_INFO "%s \n", NIITM_NAME);
 }
 
 
