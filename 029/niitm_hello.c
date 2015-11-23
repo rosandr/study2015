@@ -1,14 +1,14 @@
 #include <linux/module.h>
-#include "print_ko.h"
+#include "print_hello.h"
 #define NIITM_NAME "niitm hello"
 
 
 
 static int niitm_init(void)
 {
+    printk(KERN_INFO "niitm_hello loaded\n");
+    printHello();
 
-    print_ko();
-    //printk(KERN_INFO "Loaded %s \n", NIITM_NAME);
     return 0;
 }
 

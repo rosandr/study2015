@@ -1,8 +1,8 @@
 #include <linux/module.h>
-#define NIITM_NAME "hello to you, my friend"
+#define NIITM_NAME "hello to you, my friend from print_ko"
 
 
-void print_ko(void)
+void printHello(void)
 {
     printk(KERN_INFO "%s \n", NIITM_NAME);
 }
@@ -17,7 +17,7 @@ static void niitm_exit(void)
 {
 }
 
-EXPORT_SYMBOL(print_ko);
+EXPORT_SYMBOL(printHello);
 
 module_init(niitm_init);
 module_exit(niitm_exit);
