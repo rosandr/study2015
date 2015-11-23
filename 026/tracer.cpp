@@ -124,19 +124,38 @@ int main(int argc, char** argv, char** env)
     act.sa_handler = sigint_handler;
     sigaction(SIGINT, &act, NULL);		// ^C
 
-return 0;
+
     //----------------------------------------------------------
-    s=socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
+    s=socket(AF_INET, SOCK_RAW, IPPROTO_UDP);
     if(s<=0)
     {
         perror("socket");
         return -1;
     }
 
+    bool opt=true;
+    if(setsockopt (s, IPPROTO_IP, IP_HDRINCL, (char*)&opt, sizeof(opt))<0)
+    {
+        perror("setsockopt");
+        return -1;
+    }
+
+
     memset(&addr, 0, sizeof(addr));
     addr.sin_family = AF_INET;
     addr.sin_addr.s_addr = ((in_addr_t)ip.s_addr);
     addr.sin_port = htons(0);
+
+
+
+return 0;
+
+
+
+
+
+
+
 
     // prepare ICMP echo request
     struct icmphdr echoReq;
