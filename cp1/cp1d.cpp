@@ -18,8 +18,6 @@
 using namespace std;
 #define BUF_SIZE 3096
 
-//extern int optind, optopt;
-
 unsigned short localport;
 
 void usage (char* name)
@@ -42,7 +40,6 @@ void sigint_handler_usr1(int sig)
 {
     syslog(LOG_NOTICE, "income signal USR1: %d", sig);
     usr1_count++;
-    return;
 }
 
 int usr2_count=0;
@@ -50,7 +47,6 @@ void sigint_handler_usr2(int sig)
 {
     syslog(LOG_NOTICE, "income signal USR2: %d", sig);
     usr2_count++;
-    return;
 }
 
 
@@ -89,7 +85,7 @@ void runsrv(int s)
 	    case 1:
 
 		break;
-
+//        	send(sock, buf, to-buf, 0);
 	    case 2:
 
 		break;
@@ -99,7 +95,7 @@ void runsrv(int s)
 		break;
 	}
 
-//        send(sock, buf, to-buf, 0);
+
     }
     close(sock);
     closelog();
