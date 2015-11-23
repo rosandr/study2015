@@ -31,17 +31,10 @@ void usage (char* name)
 int sock;
 void sigint_handler(int sig) 
 {
-    if(sig == 16)
-    {
-	syslog(LOG_NOTICE, "stop working by signal: %d", sig);
-    }
-    else
-    {
-	syslog(LOG_NOTICE, "stop working by signal: %d", sig);
-	closelog();
-	close(sock);
-	exit(0);
-    }
+    syslog(LOG_NOTICE, "stop working by signal: %d", sig);
+    closelog();
+    close(sock);
+    exit(0);
 }
 
 int usr1_count=0;
@@ -49,6 +42,7 @@ void sigint_handler_usr1(int sig)
 {
     syslog(LOG_NOTICE, "income signal USR1: %d", sig);
     usr1_count++;
+    return;
 }
 
 int usr2_count=0;
@@ -56,8 +50,8 @@ void sigint_handler_usr2(int sig)
 {
     syslog(LOG_NOTICE, "income signal USR2: %d", sig);
     usr2_count++;
+    return;
 }
-
 
 
 void runsrv(int s)
@@ -80,58 +74,24 @@ void runsrv(int s)
     {
         int nb=recv(sock, buf, BUF_SIZE, 0);
         if (nb <=0)	break;
-        buf[nb]=0;
+        //buf[nb]=0;
 
-        printf("%s \n", buf);
-/*
-        char str[120];
-        sscanf(buf, "%s %s", str, str);
+        printf("%d \n", buf[0]);
 
-        char* to = str+1;
-        if(strlen(to)==0)	to="index.html";
+	switch(buf[0])
+	{
+	    case 1:
 
-        if (access(to, F_OK) == -1)
-        {
-            to = buf;
-            to=stpcpy(to, "HTTP/1.1 404 Not Found\n");
-            to=stpcpy(to, "Connection: keep-alive\n");
-            to=stpcpy(to, "Content-Type: text/html; charset=UTF-8\n");
-            to=stpcpy(to, "Keep-Alive: timeout=5,max=97\n");
-            to=stpcpy(to, "\n");
-            to=stpcpy(to, "Erorr 404 Page not found\n");
-        }
-        else
-        {
-            int n = strcmp(to, "i.jpeg");
-            if(n==0)
-            {
-                to = buf;
-                fseek(fd1, 0, SEEK_SET);
-                to=stpcpy(to, "HTTP/1.1 200 OK\n");
-                to=stpcpy(to, "Connection: keep-alive\n");
-                to=stpcpy(to, "Content-Type: image/jpeg\n");
-                to=stpcpy(to, "Keep-Alive: timeout=5,max=97\n");
-                to=stpcpy(to, "\n");
-                nb=fread (to, fd1size, 1, fd1);
-                if (nb <=0)	break;
-                to+=fd1size;
-            }
-            else
-            {
-                to = buf;
-                fseek(fd, 0, SEEK_SET);
-                to=stpcpy(to, "HTTP/1.1 200 OK\n");
-                to=stpcpy(to, "Connection: keep-alive\n");
-                to=stpcpy(to, "Content-Type: text/html; charset=UTF-8\n");
-                to=stpcpy(to, "Keep-Alive: timeout=5,max=97\n");
-                to=stpcpy(to, "\n");
-                nb=fread (to, fdsize, 1, fd);
-                if (nb <=0)	break;
-                to+=fdsize;
-            }
-        }
-        to=stpcpy(to, "\n");
-*/
+		break;
+
+	    case 2:
+
+		break;
+
+	    case 3:
+
+		break;
+	}
 //        send(sock, buf, to-buf, 0);
     }
     close(sock);
@@ -141,10 +101,6 @@ void runsrv(int s)
 
 int main(int argc, char** argv, char** env)
 {
-
-    int opt;
-    int mode = 0;
-
     if (argc <2)
     {
 	usage(basename(argv[0]));
@@ -190,9 +146,9 @@ int main(int argc, char** argv, char** env)
             exit(1);
 
         case 0:		// child
-            static struct sigaction act;
-            act.sa_handler = sigint_handler;
-            sigaction(SIGINT, &act, NULL);		// ^C
+//            static struct sigaction act;
+//            act.sa_handler = sigint_handler;
+//            sigaction(SIGINT, &act, NULL);		// ^C
 
             static struct sigaction act1;
             act1.sa_handler = sigint_handler_usr1;
