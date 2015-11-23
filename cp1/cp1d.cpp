@@ -16,9 +16,7 @@
 
 #include <iostream>
 using namespace std;
-#define BUF_SIZE 3096
-
-unsigned short localport;
+#define BUF_SIZE 256
 
 void usage (char* name)
 {
@@ -27,28 +25,35 @@ void usage (char* name)
 }
 
 int sock;
+unsigned short localport;
+
+bool usr1_en=true;
+int usr1_count=0;
+bool usr2_en=true;
+int usr2_count=0;
+
 void sigint_handler(int sig) 
 {
-    syslog(LOG_NOTICE, "stop working by signal: %d", sig);
-    closelog();
-    close(sock);
-    exit(0);
+    if(sig==SIGINT)
+    {
+        syslog(LOG_NOTICE, "stop working by signal: %d", sig);
+        closelog();
+        close(sock);
+        exit(0);
+    }
+    if( sig==SIGUSR1 )
+    {
+        syslog(LOG_NOTICE, "income signal USR1: %d", sig);
+        if(usr1_en)    usr1_count++;
+    }
+    else if(sig==SIGUSR2)
+    {
+        syslog(LOG_NOTICE, "income signal USR2: %d", sig);
+        if(usr2_en)    usr2_count++;
+    }
 }
 
-int usr1_count=0;
-void sigint_handler_usr1(int sig) 
-{
-    syslog(LOG_NOTICE, "income signal USR1: %d", sig);
-    usr1_count++;
-}
-
-int usr2_count=0;
-void sigint_handler_usr2(int sig) 
-{
-    syslog(LOG_NOTICE, "income signal USR2: %d", sig);
-    usr2_count++;
-}
-
+char helpStr[] = "Use en1, en2 to enable SIGUSR1/2,\ndis1, dis2 to disable SIGUSR1/2,\nstat to print statistics,\nexit to quit program.\n\n";
 
 void runsrv(int s)
 {
@@ -65,37 +70,51 @@ void runsrv(int s)
         return;
     }
 
+    send(sock, helpStr, strlen(helpStr), 0);
 
-    while(1)
+    while( 1 )
     {
         int nb=recv(sock, buf, BUF_SIZE, 0);
-        if (nb <=0)	break;
+        if (nb <=0)	continue;   // break;?????????????????????????
 
-        //buf[nb]=0;
-        //printf("%s \n", buf);
+        buf[nb]=0;
 
-        //char str[120];
-        //sscanf(buf, "%s", str);
-
-
-        printf("%d \n", buf[0]);
-
-	switch(buf[0])
-	{
-	    case 1:
-
-		break;
-//        	send(sock, buf, to-buf, 0);
-	    case 2:
-
-		break;
-
-	    case 3:
-
-		break;
-	}
-
-
+        if(!strncmp(buf, "en1", 3))
+        {
+            nb = snprintf(buf, sizeof(buf), "%s\n", "enable usr1 counter");
+            send(sock, buf, nb, 0);
+            usr1_en=true;
+        }
+        else if(!strncmp(buf, "en2", 3))
+        {
+            nb = snprintf(buf, sizeof(buf), "%s\n", "enable usr2 counter");
+            send(sock, buf, nb, 0);
+            usr2_en=true;
+        }
+        else if(!strncmp(buf, "dis1", 4))
+        {
+            nb = snprintf(buf, sizeof(buf), "%s\n", "disable usr1 counter");
+            send(sock, buf, nb, 0);
+            usr1_en=false;
+        }
+        else if(!strncmp(buf, "dis2", 4))
+        {
+            nb = snprintf(buf, sizeof(buf), "%s\n", "disable usr2 counter");
+            send(sock, buf, nb, 0);
+            usr2_en=false;
+        }
+        else if(!strncmp(buf, "stat", 4))
+        {
+            nb = snprintf(buf, sizeof(buf), "usr1 count=%d, usr2 count=%d\n", usr1_count, usr2_count);
+            send( sock, buf, nb, 0 );
+        }
+        else if(!strncmp(buf, "exit", 4))
+        {
+            send(sock, "bye...\n", strlen("bye...\n"), 0);
+            break;
+        }
+        else
+            send(sock, helpStr, strlen(helpStr), 0);
     }
     close(sock);
     closelog();
@@ -112,7 +131,7 @@ int main(int argc, char** argv, char** env)
 
 
     localport = atoi(argv[1]);
-    if((localport<9999)||(localport>64000))
+    if((localport<999)||(localport>54000))
     {
         printf("port range error: %d\n", localport);
         usage(basename(argv[0]));
@@ -130,9 +149,9 @@ int main(int argc, char** argv, char** env)
 
     while( bind(s, (struct sockaddr*)&inaddr, sizeof(inaddr)) < 0)
     {
-	printf(".");
-	fflush(NULL);
-	usleep(100000);
+        printf(".");
+        fflush(NULL);
+        usleep(100000);
     }
 
     if(listen(s, 10)<0)
@@ -141,44 +160,43 @@ int main(int argc, char** argv, char** env)
         return 1;
     }
 
-        pid_t pid;
-        switch( pid=fork() )
-        {
-        case -1:
-            perror("fork");
-            exit(1);
+    pid_t pid;
+    switch( pid=fork() )
+    {
+    case -1:
+        perror("fork");
+        exit(1);
 
-        case 0:		// child
-            static struct sigaction act;
-            act.sa_handler = sigint_handler;
-            sigaction(SIGINT, &act, NULL);		// ^C
+    case 0:		// child
 
+        fprintf(stderr, "child pid=%d\n", getpid());
 
-            static struct sigaction act1;
-            act1.sa_flags = SA_SIGINFO;
-            sigemptyset(&act1.sa_mask);
-            act1.sa_handler = sigint_handler_usr1;
-            sigaction(SIGUSR1, &act1, NULL);		// USR1
+        struct sigaction act;
+        memset(&act, 0, sizeof(act));
+        act.sa_handler = sigint_handler;
 
+        sigset_t   set;
+        sigemptyset(&set);
+        sigaddset(&set, SIGINT);
+        sigaddset(&set, SIGUSR1);
+        sigaddset(&set, SIGUSR2);
 
-            static struct sigaction act2;
-            act2.sa_flags = SA_SIGINFO;
-            sigemptyset(&act2.sa_mask);
-            act2.sa_handler = sigint_handler_usr2;
-            sigaction(SIGUSR2, &act2, NULL);		// USR2
+        act.sa_mask = set;
+        sigaction(SIGINT,  &act, 0);
+        sigaction(SIGUSR1, &act, 0);
+        sigaction(SIGUSR2, &act, 0);
 
+        setsid();
 
-            setsid();
+        close(STDIN_FILENO);
+        close(STDOUT_FILENO);
+        close(STDERR_FILENO);
 
-            close(STDIN_FILENO);
-            close(STDOUT_FILENO);
-            close(STDERR_FILENO);
+        openlog("MYDAEMON", 0, LOG_USER);
+        syslog(LOG_NOTICE, "daemon start working on port: %d", localport);
 
-            openlog("MYDAEMON", 0, LOG_USER);
-            syslog(LOG_NOTICE, "daemon start working on port: %d", localport);
-
-            runsrv(s);
-        }
-	sleep(1);
+        runsrv(s);
+    }
+    usleep(100000);
     return 0;
 }
