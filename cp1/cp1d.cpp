@@ -74,7 +74,13 @@ void runsrv(int s)
     {
         int nb=recv(sock, buf, BUF_SIZE, 0);
         if (nb <=0)	break;
+
         //buf[nb]=0;
+        //printf("%s \n", buf);
+
+        //char str[120];
+        //sscanf(buf, "%s", str);
+
 
         printf("%d \n", buf[0]);
 
@@ -92,6 +98,7 @@ void runsrv(int s)
 
 		break;
 	}
+
 //        send(sock, buf, to-buf, 0);
     }
     close(sock);
@@ -146,15 +153,21 @@ int main(int argc, char** argv, char** env)
             exit(1);
 
         case 0:		// child
-//            static struct sigaction act;
-//            act.sa_handler = sigint_handler;
-//            sigaction(SIGINT, &act, NULL);		// ^C
+            static struct sigaction act;
+            act.sa_handler = sigint_handler;
+            sigaction(SIGINT, &act, NULL);		// ^C
+
 
             static struct sigaction act1;
+            act1.sa_flags = SA_SIGINFO;
+            sigemptyset(&act1.sa_mask);
             act1.sa_handler = sigint_handler_usr1;
             sigaction(SIGUSR1, &act1, NULL);		// USR1
 
+
             static struct sigaction act2;
+            act2.sa_flags = SA_SIGINFO;
+            sigemptyset(&act2.sa_mask);
             act2.sa_handler = sigint_handler_usr2;
             sigaction(SIGUSR2, &act2, NULL);		// USR2
 
