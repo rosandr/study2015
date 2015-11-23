@@ -18,24 +18,47 @@
 using namespace std;
 #define BUF_SIZE 3096
 
-extern int optind, optopt;
+//extern int optind, optopt;
+
+unsigned short localport;
 
 void usage (char* name)
 {
-    printf("\nUsage:\t%s [options]  port\n", name);
-    printf("(use CTRL-C to terminate %s)\n\n", name);
-    printf("          -h  - print this help,\n");
+    printf("\nUsage:\t%s  port\n", name);
     printf("Example: ./%s 10000\n", name);
 }
 
 int sock;
 void sigint_handler(int sig) 
 {
-    syslog(LOG_NOTICE, "WEBsrv stop working by signal: %d", sig);
-    closelog();
-    close(sock);
-    exit(0);
+    if(sig == 16)
+    {
+	syslog(LOG_NOTICE, "stop working by signal: %d", sig);
+    }
+    else
+    {
+	syslog(LOG_NOTICE, "stop working by signal: %d", sig);
+	closelog();
+	close(sock);
+	exit(0);
+    }
 }
+
+int usr1_count=0;
+void sigint_handler_usr1(int sig) 
+{
+    syslog(LOG_NOTICE, "income signal USR1: %d", sig);
+    usr1_count++;
+}
+
+int usr2_count=0;
+void sigint_handler_usr2(int sig) 
+{
+    syslog(LOG_NOTICE, "income signal USR2: %d", sig);
+    usr2_count++;
+}
+
+
 
 void runsrv(int s)
 {
@@ -45,20 +68,22 @@ void runsrv(int s)
     sockaddr_in fromaddr;
     socklen_t ln=sizeof(fromaddr);
 
+    sock = accept(s, (sockaddr*)(&fromaddr), &ln);
+    if( sock<= 0)
+    {
+        perror("accept");
+        return;
+    }
+
+
     while(1)
     {
-        sock = accept(s, (sockaddr*)(&fromaddr), &ln);
-        if( sock<= 0)
-        {
-            perror("accept");
-            break;
-        }
-/*
         int nb=recv(sock, buf, BUF_SIZE, 0);
         if (nb <=0)	break;
         buf[nb]=0;
-        //printf("%s \n", buf);
 
+        printf("%s \n", buf);
+/*
         char str[120];
         sscanf(buf, "%s %s", str, str);
 
@@ -108,12 +133,12 @@ void runsrv(int s)
         to=stpcpy(to, "\n");
 */
 //        send(sock, buf, to-buf, 0);
-        close(sock);
     }
+    close(sock);
     closelog();
 }
 
-unsigned short localport;
+
 int main(int argc, char** argv, char** env)
 {
 
@@ -127,34 +152,14 @@ int main(int argc, char** argv, char** env)
     }
 
 
-
-/*
-    while ((opt = getopt(argc, argv, "hdp:")) != -1)
+    localport = atoi(argv[1]);
+    if((localport<9999)||(localport>64000))
     {
-        switch (opt)
-        {
-        case 'h':
-            usage(basename(argv[0]));
-            exit(0);
-
-        case 'p':
-            localport = atoi(optarg);
-            if((localport<9999)||(localport>64000))
-            {
-                printf("Invalid port number\n");
-                exit(0);
-            }
-            break;
-//        case 'd':
-//            mode = 1;
-//            break;
-
-        default:
-            usage(basename(argv[0]));
-            exit(0);
-        }
+        printf("port range error: %d\n", localport);
+        usage(basename(argv[0]));
+        return 0;
     }
-*/
+
     //----------------------------------------------------------
     int s=socket( AF_INET, SOCK_STREAM, 0 );
 
@@ -177,8 +182,6 @@ int main(int argc, char** argv, char** env)
         return 1;
     }
 
-    // daemon mode
-
         pid_t pid;
         switch( pid=fork() )
         {
@@ -191,19 +194,26 @@ int main(int argc, char** argv, char** env)
             act.sa_handler = sigint_handler;
             sigaction(SIGINT, &act, NULL);		// ^C
 
+            static struct sigaction act1;
+            act1.sa_handler = sigint_handler_usr1;
+            sigaction(SIGUSR1, &act1, NULL);		// USR1
+
+            static struct sigaction act2;
+            act2.sa_handler = sigint_handler_usr2;
+            sigaction(SIGUSR2, &act2, NULL);		// USR2
+
+
             setsid();
 
             close(STDIN_FILENO);
             close(STDOUT_FILENO);
             close(STDERR_FILENO);
 
-            //openlog("WEBsrv", 0, LOG_USER);
-            //syslog(LOG_NOTICE, "WEBsrv start working on port: %d", localport);
+            openlog("MYDAEMON", 0, LOG_USER);
+            syslog(LOG_NOTICE, "daemon start working on port: %d", localport);
 
             runsrv(s);
         }
-        //runsrv(s);
-        close(sock);
-
+	sleep(1);
     return 0;
 }
