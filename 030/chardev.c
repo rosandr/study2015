@@ -1,9 +1,14 @@
 #include <linux/module.h>
 #include <linux/fs.h>
-
+#include <linux/cdev.h>
+#include <linux/types.h>
 
 #define KBUF_LOADED "kbuf loaded"
-#define DEVNAME "kbuf"
+
+
+
+char DEVNAME[]="kbuf";
+
 
 ssize_t chardev_read (struct file * fd, char __user* addr, size_t size, loff_t* loff)
 {
@@ -59,17 +64,19 @@ static int chardev_init(void)
     //static struct file_operations* fops;
 
 
-    // 1. ------- registration (determ.  fops apriori)
+    // 1. ------- registration (determ.  fops apriori cat /proc/devices  )
     //int res = 
-    register_chrdev (60, "kbuf", &fops);
+    register_chrdev (60, DEVNAME, &fops);
 
-    // 2. ------- add device
-    //struct cdev *my_dev;
-    dev_t first_node = MKDEV( 60, 1);
-    register_chrdev_region(first_node, 1, "kbuf");
+    // 2. ------- add device  ls -la /dev/kbuf
+    dev_t dev_node;
+    dev_node = MKDEV( 60, 1);
+    register_chrdev_region(dev_node, 1, DEVNAME);
 
-
-//    cdev_init()
+    struct cdev* my_dev;
+    my_dev = cdev_alloc();
+    cdev_init(my_dev, &fops);
+    cdev_add(my_dev, dev_node, 1);
 
     return 0;
 }
@@ -77,7 +84,7 @@ static int chardev_init(void)
 static void chardev_exit(void)
 {
 //    int res = 
-    unregister_chrdev (60, 1);
+    unregister_chrdev (60, DEVNAME);
     printk(KERN_INFO "chardev unloaded\n");
 }
 

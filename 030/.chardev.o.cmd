@@ -628,6 +628,7 @@ deps_/home/study/tmp/study2015/030/chardev.o := \
   include/uapi/linux/fcntl.h \
   arch/x86/include/uapi/asm/fcntl.h \
   include/uapi/asm-generic/fcntl.h \
+  include/linux/cdev.h \
 
 /home/study/tmp/study2015/030/chardev.o: $(deps_/home/study/tmp/study2015/030/chardev.o)
 
