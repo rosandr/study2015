@@ -3,27 +3,64 @@
 #include <linux/cdev.h>
 #include <linux/types.h>
 #include <linux/slab.h>
-
+#include <linux/uaccess.h>
 
 #define KBUF_LOADED "kbuf loaded"
-#define BUF_SIZE 256
+#define BUF_SIZE PAGE_SIZE
 
 
 char DEVNAME[]="kbuf";
 
 char* buf;
+loff_t rd_offset=0, wr_offset=0;
+size_t buflen=BUF_SIZE;
 
 
-ssize_t chardev_read (struct file* fd, char __user* addr, size_t size, loff_t* loff)
+ssize_t chardev_read (struct file* fd, char __user* user, size_t size, loff_t* loff)
 {
-    printk(KERN_INFO "read from chardev\n");
-    return EINVAL;
+    //size_t len, rest;
+
+    printk(KERN_INFO "reading from chardev\n");
+/*
+    rest = BUF_SIZE - rd_offset;
+    len = min(size, rest);
+
+    if(len == 0)
+	return 0;
+
+    if( copy_to_user(user, buf+rd_offset, len) !=0 )
+	return -EFAULT;
+
+    //rd_offset += len;
+    *loff = rd_offset;
+
+    return len;
+*/
+    return -EINVAL;
 }
 
-ssize_t chardev_write (struct file* fd, const char __user* addr, size_t size, loff_t* loff)
+ssize_t chardev_write (struct file* fd, const char __user* user, size_t size, loff_t* loff)
 {
-    printk(KERN_INFO "write to chardev\n");
-    return EINVAL;
+//    size_t len, rest;
+
+    printk(KERN_INFO "writing to chardev\n");
+/*
+    rest = BUF_SIZE - wr_offset;
+    len = min(size, rest);
+
+    if(len == 0)
+	return 0;
+
+    if( copy_from_user(buf+wr_offset, user, len) !=0 )
+	return -EFAULT;
+
+    wr_offset += len;
+    *loff = wr_offset;
+
+    return len;
+
+*/
+    return -EINVAL;
 }
 
 int chardev_open (struct inode * in, struct file * fd)
@@ -72,16 +109,15 @@ static int chardev_init(void)
     cdev_add(my_dev, dev_node, 1);
 
     // 3. ------- implement internal buffer
-    buf = kmalloc( PAGE_SIZE, GFP_KERNEL);
+    //buf = kmalloc( BUF_SIZE, GFP_KERNEL);
 
-    if(buf == NULL)
-
+    //if(buf == NULL)	return -1;
     return 0;
 }
 
 static void chardev_exit(void)
 {
-    kfree(buf);
+    //kfree(buf);
 //    int res = 
     unregister_chrdev (60, DEVNAME);
     printk(KERN_INFO "chardev unloaded\n");
