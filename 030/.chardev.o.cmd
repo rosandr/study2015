@@ -629,6 +629,15 @@ deps_/home/study/tmp/study2015/030/chardev.o := \
   arch/x86/include/uapi/asm/fcntl.h \
   include/uapi/asm-generic/fcntl.h \
   include/linux/cdev.h \
+  include/linux/slab.h \
+    $(wildcard include/config/debug/slab.h) \
+    $(wildcard include/config/failslab.h) \
+    $(wildcard include/config/slab.h) \
+    $(wildcard include/config/slub.h) \
+    $(wildcard include/config/slob.h) \
+  include/linux/kmemleak.h \
+    $(wildcard include/config/debug/kmemleak.h) \
+  include/linux/kasan.h \
 
 /home/study/tmp/study2015/030/chardev.o: $(deps_/home/study/tmp/study2015/030/chardev.o)
 
