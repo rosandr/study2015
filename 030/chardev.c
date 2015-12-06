@@ -3,7 +3,7 @@
 #include <linux/cdev.h>
 #include <linux/types.h>
 #include <linux/slab.h>
-
+#include <linux/uaccess.h>
 
 #define KBUF_LOADED "kbuf loaded"
 #define BUF_SIZE PAGE_SIZE
@@ -20,10 +20,22 @@ dev_t dev_node;
 struct cdev* my_dev=NULL;
 
 
-ssize_t chardev_read (struct file* fd, char __user* user, size_t size, loff_t* loff)
+ssize_t chardev_read (struct file* fd, char __user* user, size_t len, loff_t* off)
 {
     printk(KERN_INFO "read from chardev\n");
-    return 0;
+
+    if (*off >= BUF_SIZE)
+        return 0;       // no more data
+
+    if (*off + len > BUF_SIZE)
+        len = BUF_SIZE - *off;
+
+    if (copy_to_user(user, buf, len))
+        return -EFAULT;
+
+    *off += len;
+
+    return len;
 }
 
 ssize_t chardev_write (struct file* fd, const char __user* addr, size_t size, loff_t* loff)
@@ -61,7 +73,7 @@ static int chardev_init(void)
     int res;
 
     // 3. ------- implement internal buffer
-    buf = kmalloc( BUF_SIZE, GFP_KERNEL);
+    buf = kzalloc( BUF_SIZE, GFP_KERNEL);
 
     if(buf == NULL)
     {
