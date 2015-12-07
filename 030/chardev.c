@@ -5,68 +5,181 @@
 #include <linux/slab.h>
 #include <linux/uaccess.h>
 
+#include <linux/sched.h>
+
+#include "chardev.h"
+
 #define KBUF_LOADED "kbuf loaded"
 #define BUF_SIZE PAGE_SIZE
 
-
 char DEVNAME[]="kbuf";
-int dev_major = 60;
+int dev_major = DEV_MAJOR;
 int dev_minor = 1;
 int dev_count=1;
-char* buf=NULL;
 
+char* buf=NULL;     // work buffer
+int cur_pos=0;
 
 dev_t dev_node;
 struct cdev* my_dev=NULL;
 
-
-ssize_t chardev_read (struct file* fd, char __user* user, size_t len, loff_t* off)
+//========================================================
+/*
+ * fd - откуда
+ * буфер для возврата данных
+ * размер буфера
+ * off ??
+*/
+ssize_t chardev_read (struct file* fd, char __user* user, size_t user_len, loff_t* off)
 {
+    int rd_len= cur_pos;
     printk(KERN_INFO "read from chardev\n");
 
-    if (*off >= BUF_SIZE)
-        return 0;       // no more data
+    if( user_len < cur_pos )  return -EINVAL;      // too litle user buffer
 
-    if (*off + len > BUF_SIZE)
-        len = BUF_SIZE - *off;
+    if( *off != 0 )     return 0;           // EOF
 
-    if (copy_to_user(user, buf, len))
-        return -EFAULT;
+    if( copy_to_user( user, buf, rd_len ) ) return -EFAULT;
 
-    *off += len;
+    *off = rd_len;
+    cur_pos=0;
+    dev_stat.read_cnt++;
 
-    return len;
+    return rd_len;
 }
 
-ssize_t chardev_write (struct file* fd, const char __user* addr, size_t size, loff_t* loff)
+
+/*
+ * fd - куда
+ * буфер для полученных данных
+ * размер данных
+ * off ??
+*/
+ssize_t chardev_write (struct file* fd, const char __user* user, size_t size, loff_t* off)
 {
+    int rest = BUF_SIZE-cur_pos;
+
     printk(KERN_INFO "write to chardev\n");
-    return 0;
+
+    if (size > rest )   return -EINVAL;       // too long data
+
+    if(copy_from_user((void *)(buf + cur_pos), user, size))
+    {
+        printk(KERN_ERR "copy_from_user() failed\n");
+        return -EFAULT;
+    }
+    cur_pos += size;
+    dev_stat.write_cnt++;
+
+    return size;
 }
+
+
+loff_t chardev_seek (struct file* fd, loff_t off, int whence)
+{
+    if( off > (BUF_SIZE-1) || off < 0 )
+    {
+        printk(KERN_ERR "lseek() SEEK_SET : Invalid offset!\n");
+        return -EOVERFLOW;
+    }
+
+    printk(KERN_INFO "chardev lseek()\n");
+
+    switch( whence )
+    {
+    case SEEK_SET:      // от начала
+        cur_pos=off;
+        break;
+
+    case SEEK_CUR:      // от текущей
+
+        if( off > (BUF_SIZE-1-cur_pos) )
+        {
+            printk(KERN_ERR "lseek() SEEK_CUR : Invalid offset!\n");
+            return -EOVERFLOW;
+        }
+        cur_pos+=off;
+
+        break;
+    case SEEK_END:      // от конца
+        if( off > 0 || off < (1-BUF_SIZE) )
+        {
+            printk(KERN_ERR "lseek() SEEK_END : Invalid offset!\n");
+            return -EOVERFLOW;
+        }
+
+        cur_pos = off + (BUF_SIZE-1);
+        break;
+    default:
+        return -EINVAL;
+    }
+
+    dev_stat.seek_cnt++;
+    return cur_pos;
+}
+
 
 int chardev_open (struct inode* in, struct file* fd)
 {
-    printk(KERN_INFO "chardev open \n");
+    printk(KERN_INFO "chardev open() \n");
+    dev_stat.open_cnt++;
     return 0;
 }
 
+
 int chardev_release (struct inode* in, struct file* fd)
 {
-    printk(KERN_INFO "chardev close \n");
+    printk(KERN_INFO "chardev close() \n");
+    dev_stat.close_cnt++;
     return 0;
 }
+
+long chardev_ioctl( struct file* fd, unsigned int cmd, unsigned long param)
+{
+    int ret =-1;
+    struct task_struct* init_task = current;
+    struct task_struct *task = init_task;
+
+    printk(KERN_INFO "chardev ioctl() \n");
+
+    switch (cmd)
+    {
+    case IOCTL_GET_STAT:
+        if( copy_to_user((void __user *)param, (void*)&dev_stat, sizeof( dev_stat)))
+            printk(KERN_ERR "IOCTL_GET_STAT failed\n");
+        else ret=0;
+        break;
+    case IOCTL_RESET_STAT:
+        memset((void*)&dev_stat, 0, sizeof( dev_stat));
+        ret =0;
+        break;
+    case IOCTL_GET_PROCLIST:
+        //printk( KERN_INFO "Current task is %s [%d]\n", task->comm, task->pid );
+
+        do
+        {
+          printk( KERN_INFO "*** %s [%d] parent %s\n",
+                         task->comm, task->pid, task->parent->comm );
+
+        } while ( (task = next_task(task)) != init_task );
+        break;
+    default:
+        break;
+    }
+    return ret;
+}
+
 
 static const struct file_operations fops=
 {
     .owner = THIS_MODULE,
+    .llseek = chardev_seek,
     .read = chardev_read,
     .write = chardev_write,
     .open = chardev_open,
     .release = chardev_release,
+    .unlocked_ioctl = chardev_ioctl,
 };
-
-
-
 
 static int chardev_init(void)
 {
@@ -113,6 +226,8 @@ static int chardev_init(void)
         unregister_chrdev_region( dev_node, dev_count );
         return -1;
     }
+
+    memset((void*)&dev_stat, 0, sizeof( dev_stat));
 
     return 0;
 }
