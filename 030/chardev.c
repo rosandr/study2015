@@ -146,7 +146,7 @@ long chardev_ioctl( struct file* fd, unsigned int cmd, unsigned long param)
     {
     case IOCTL_GET_STAT:
         if( copy_to_user((void __user *)param, (void*)&dev_stat, sizeof( dev_stat)))
-            printk(KERN_ERR "IOCTL_GET_STAT failed\n");
+            printk(KERN_ERR "chardev IOCTL_GET_STAT failed\n");
         else ret=0;
         break;
     case IOCTL_RESET_STAT:
@@ -158,9 +158,8 @@ long chardev_ioctl( struct file* fd, unsigned int cmd, unsigned long param)
 
         do
         {
-          printk( KERN_INFO "*** %s [%d] parent %s\n",
+          printk( KERN_INFO "chardev IOCTL_GET_PROCLIST: %s [%d] parent %s\n",
                          task->comm, task->pid, task->parent->comm );
-
         } while ( (task = next_task(task)) != init_task );
         break;
     default:
