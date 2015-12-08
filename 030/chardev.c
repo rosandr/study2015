@@ -12,7 +12,7 @@
 #define KBUF_LOADED "kbuf loaded"
 #define BUF_SIZE PAGE_SIZE
 
-char DEVNAME[]="kbuf";
+//char DEVNAME[]="kbuf";
 int dev_major = DEV_MAJOR;
 int dev_minor = 1;
 int dev_count=1;
@@ -36,13 +36,23 @@ ssize_t chardev_read (struct file* fd, char __user* user, size_t user_len, loff_
     printk(KERN_INFO "read from chardev\n");
 
     if( user_len < cur_pos )  return -EINVAL;      // too litle user buffer
-
+/*
     if( *off != 0 )     return 0;           // EOF
 
     if( copy_to_user( user, buf, rd_len ) ) return -EFAULT;
 
     *off = rd_len;
     cur_pos=0;
+    dev_stat.read_cnt++;
+
+    return rd_len;
+    */
+
+    if( cur_pos == 0 )     return 0;           // EOF
+
+    if( copy_to_user( user, buf, rd_len ) ) return -EFAULT;
+
+    *off=cur_pos=0;
     dev_stat.read_cnt++;
 
     return rd_len;
@@ -71,6 +81,7 @@ ssize_t chardev_write (struct file* fd, const char __user* user, size_t size, lo
     cur_pos += size;
     dev_stat.write_cnt++;
 
+    *off=cur_pos;
     return size;
 }
 

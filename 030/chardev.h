@@ -2,6 +2,7 @@
 #define _INCLUDE_CHARDEV_H_
 //#include <ioctl.h>
 
+char DEVNAME[]="kbuf";
 #define DEV_MAJOR 60
 
 //получение статистики
