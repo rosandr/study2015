@@ -7,12 +7,8 @@
 #include <errno.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-//#include <sys/wait.h>
-//#include <sys/socket.h>
-//#include <netinet/in.h>
-//#include <arpa/inet.h>
+#include <sys/ioctl.h>
 
-//#include <pthread.h>
 
 #include <iostream>
 using namespace std;
@@ -36,12 +32,14 @@ void print_menu()
 int main(int argc, char** argv, char** env)
 {
     int nb;
+    DEV_STAT dev_stat;
     char buf[BUF_SIZE];
 
     char devfile_name[] = "/dev/kbuf";
-    FILE* fd = fopen(devfile_name, "r+");
+    FILE* file = fopen(devfile_name, "r+");
+    int fd = fileno(file);
 
-    if(fd==NULL)
+    if(file==NULL)
     {
         perror("File open");
         printf("\nPlease, create %s manualy and insert module.\n", devfile_name);
@@ -64,7 +62,7 @@ int main(int argc, char** argv, char** env)
         case '2':
 
             buf[0]=0;
-            fgets (buf, BUF_SIZE, fd);
+            fgets (buf, BUF_SIZE, file);
             printf("%d  %s\n", strlen(buf), buf);
 
 /*
@@ -101,7 +99,7 @@ int main(int argc, char** argv, char** env)
             printf("Please, type string and press <ENTER>\n");
             if (fgets (buf, BUF_SIZE, stdin) != NULL)
             {
-                if(fputs(buf, fd)<0)
+                if(fputs(buf, file)<0)
                 {
                     printf("\tKbuf write error. (May be module not loaded?)\n");
                     return 0;
@@ -110,9 +108,25 @@ int main(int argc, char** argv, char** env)
             }
             break;
         case '4':
+            nb=ioctl( fd, IOCTL_GET_STAT, &dev_stat);
+            if(nb==0)
+            {
+                printf("Statistic:\n");
+                printf("OPEN call count:%d\n", dev_stat.open_cnt);
+                printf("CLOSE call count:%d\n", dev_stat.close_cnt);
+                printf("READ call count:%d\n", dev_stat.read_cnt);
+                printf("WRITE call count:%d\n", dev_stat.write_cnt);
+                printf("SEEK call count:%d\n", dev_stat.seek_cnt);
+                printf("IOCTL call count:%d\n", dev_stat.ioctl_cnt);
+            }
+            break;
+
         case '5':
+            ioctl( fd, IOCTL_RESET_STAT, 0);
+            break;
+
         case '6':
-            printf("not implemented yet\n");
+            ioctl( fd, IOCTL_GET_PROCLIST, 0);
             break;
         default:
             break;

@@ -12,7 +12,7 @@ char DEVNAME[]="kbuf";
 //получение списка процессов
 #define IOCTL_GET_PROCLIST _IOR(DEV_MAJOR, 2, ssize_t *)
 
-static struct
+typedef struct
 {
     int open_cnt;
     int close_cnt;
@@ -20,6 +20,6 @@ static struct
     int write_cnt;
     int seek_cnt;
     int ioctl_cnt;
-}dev_stat;
+}DEV_STAT;
 
 #endif

@@ -22,6 +22,7 @@ int cur_pos=0;
 
 dev_t dev_node;
 struct cdev* my_dev=NULL;
+static DEV_STAT dev_stat;
 
 //========================================================
 /*
@@ -34,6 +35,7 @@ ssize_t chardev_read (struct file* fd, char __user* user, size_t user_len, loff_
 {
     int rd_len= cur_pos;
     printk(KERN_INFO "read from chardev\n");
+    dev_stat.read_cnt++;
 
     if( user_len < cur_pos )  return -EINVAL;      // too litle user buffer
 /*
@@ -53,7 +55,6 @@ ssize_t chardev_read (struct file* fd, char __user* user, size_t user_len, loff_
     if( copy_to_user( user, buf, rd_len ) ) return -EFAULT;
 
     *off=cur_pos=0;
-    dev_stat.read_cnt++;
 
     return rd_len;
 }
@@ -69,7 +70,8 @@ ssize_t chardev_write (struct file* fd, const char __user* user, size_t size, lo
 {
     int rest = BUF_SIZE-cur_pos;
 
-    printk(KERN_INFO "write to chardev\n");
+    printk( KERN_INFO "write to chardev\n");
+    dev_stat.write_cnt++;
 
     if (size > rest )   return -EINVAL;       // too long data
 
@@ -79,9 +81,8 @@ ssize_t chardev_write (struct file* fd, const char __user* user, size_t size, lo
         return -EFAULT;
     }
     cur_pos += size;
-    dev_stat.write_cnt++;
-
     *off=cur_pos;
+
     return size;
 }
 
@@ -95,6 +96,7 @@ loff_t chardev_seek (struct file* fd, loff_t off, int whence)
     }
 
     printk(KERN_INFO "chardev lseek()\n");
+    dev_stat.seek_cnt++;
 
     switch( whence )
     {
@@ -125,7 +127,6 @@ loff_t chardev_seek (struct file* fd, loff_t off, int whence)
         return -EINVAL;
     }
 
-    dev_stat.seek_cnt++;
     return cur_pos;
 }
 
@@ -152,6 +153,7 @@ long chardev_ioctl( struct file* fd, unsigned int cmd, unsigned long param)
     struct task_struct *task = init_task;
 
     printk(KERN_INFO "chardev ioctl() \n");
+    dev_stat.ioctl_cnt++;
 
     switch (cmd)
     {
@@ -216,11 +218,12 @@ static int chardev_init(void)
     }
     printk(KERN_INFO "Registration chardev succeed\n");
 
-
     // 2. ------- add device...         >>>ls -la /dev/kbuf
     dev_node = MKDEV( dev_major, dev_minor);        // bind to node in /dev/kbuf (node /dev/kbuf must exist)
+
+/*
     register_chrdev_region( dev_node, dev_count, DEVNAME);
-/**/
+
     my_dev = cdev_alloc();
 
     if(my_dev == NULL)
@@ -236,7 +239,7 @@ static int chardev_init(void)
         unregister_chrdev_region( dev_node, dev_count );
         return -1;
     }
-
+*/
     memset((void*)&dev_stat, 0, sizeof( dev_stat));
 
     return 0;
@@ -244,9 +247,9 @@ static int chardev_init(void)
 
 static void chardev_exit(void)
 {
-    if(my_dev)  cdev_del(my_dev);
+    //if(my_dev)  cdev_del(my_dev);
 
-    unregister_chrdev_region( dev_node, dev_count );
+    //unregister_chrdev_region( dev_node, dev_count );
 
     //    int res =
     unregister_chrdev (dev_major, DEVNAME);

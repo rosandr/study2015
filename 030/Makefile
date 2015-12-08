@@ -8,6 +8,12 @@ PWD  := $(shell pwd)
 default:
 	$(MAKE) -C $(KDIR)  M=$(PWD)
 
+mknod:
+	sudo mknod -m 666 /dev/kbuf c 60 1
+
+ls:
+	ls -l /dev/kbuf
+
 insert:
 #	`sudo insmod print_hello.ko`
 	`sudo insmod chardev.ko`
