@@ -31,14 +31,34 @@ static DEV_STAT dev_stat;
  * размер буфера
  * off ??
 */
-ssize_t chardev_read (struct file* fd, char __user* user, size_t user_len, loff_t* off)
+ssize_t chardev_read (struct file* fd, char __user* user, size_t len, loff_t* off)
 {
-    int rd_len= cur_pos;
-    printk(KERN_INFO "read from chardev\n");
+    int rd_len;
+    int rest;
+    printk(KERN_INFO "read from chardev %d %d %d\n", *off, cur_pos, len );
     dev_stat.read_cnt++;
+    *off=cur_pos;
 
-    if( user_len < cur_pos )  return -EINVAL;      // too litle user buffer
+    if( *off == BUF_SIZE )  return 0; // EOF
+
+
+    rest = BUF_SIZE - *off;
+    rd_len = (rest <= len) ? rest:len;
+
+
+
+
+    //if( len > BUF_SIZE - *off )  return 0;      // -EINVALtoo big len
+
+    if( copy_to_user( user, buf+*off, rd_len) ) return -EFAULT;
+
+    *off+=rd_len;
+    cur_pos=*off;
+    return rd_len;
+
 /*
+    if( len < cur_pos )  return -EINVAL;      // too litle user buffer
+/ *
     if( *off != 0 )     return 0;           // EOF
 
     if( copy_to_user( user, buf, rd_len ) ) return -EFAULT;
@@ -48,7 +68,7 @@ ssize_t chardev_read (struct file* fd, char __user* user, size_t user_len, loff_
     dev_stat.read_cnt++;
 
     return rd_len;
-    */
+    * /
 
     if( cur_pos == 0 )     return 0;           // EOF
 
@@ -56,7 +76,7 @@ ssize_t chardev_read (struct file* fd, char __user* user, size_t user_len, loff_
 
     *off=cur_pos=0;
 
-    return rd_len;
+    return rd_len;*/
 }
 
 
@@ -66,8 +86,25 @@ ssize_t chardev_read (struct file* fd, char __user* user, size_t user_len, loff_
  * размер данных
  * off ??
 */
-ssize_t chardev_write (struct file* fd, const char __user* user, size_t size, loff_t* off)
+ssize_t chardev_write (struct file* fd, const char __user* user, size_t len, loff_t* off)
 {
+    printk( KERN_INFO "write to chardev %d %d %d\n", *off, cur_pos, len );
+    dev_stat.write_cnt++;
+    *off=cur_pos;
+
+    if( len > BUF_SIZE - *off )  return -EINVAL;      // too big len
+
+    if(copy_from_user((void *)(buf + *off), user, len))
+    {
+        printk(KERN_ERR "copy_from_user() failed\n");
+        return -EFAULT;
+    }
+
+    *off += len;
+    cur_pos=*off;
+
+    return len;
+    /*
     int rest = BUF_SIZE-cur_pos;
 
     printk( KERN_INFO "write to chardev\n");
@@ -84,11 +121,49 @@ ssize_t chardev_write (struct file* fd, const char __user* user, size_t size, lo
     *off=cur_pos;
 
     return size;
+    */
 }
 
 
 loff_t chardev_seek (struct file* fd, loff_t off, int whence)
 {
+    printk(KERN_INFO "chardev lseek()\n");
+    dev_stat.seek_cnt++;
+
+    switch( whence )
+    {
+    case SEEK_SET:      // от начала
+        if( off > BUF_SIZE || off < 0 )
+        {
+            printk(KERN_ERR "lseek() SEEK_SET : Invalid offset!\n");
+            return -EOVERFLOW;
+        }
+        cur_pos=off;
+        break;
+
+    case SEEK_CUR:      // от текущей
+        if( (off > (BUF_SIZE-cur_pos)) || (off < (0-cur_pos)) )
+        {
+            printk(KERN_ERR "lseek() SEEK_CUR : Invalid offset!\n");
+            return -EOVERFLOW;
+        }
+        cur_pos+=off;
+        break;
+
+    case SEEK_END:      // от конца
+        if( off > 0 || off < (0-BUF_SIZE) )
+        {
+            printk(KERN_ERR "lseek() SEEK_END : Invalid offset!\n");
+            return -EOVERFLOW;
+        }
+
+        cur_pos = off + BUF_SIZE;
+        break;
+    default:
+        return -EINVAL;
+    }
+
+    /*
     if( off > (BUF_SIZE-1) || off < 0 )
     {
         printk(KERN_ERR "lseek() SEEK_SET : Invalid offset!\n");
@@ -126,8 +201,9 @@ loff_t chardev_seek (struct file* fd, loff_t off, int whence)
     default:
         return -EINVAL;
     }
-
+*/
     return cur_pos;
+
 }
 
 
@@ -195,7 +271,7 @@ static const struct file_operations fops=
 
 static int chardev_init(void)
 {
-    int res;
+    //int res;
 
     // 3. ------- implement internal buffer
     buf = kzalloc( BUF_SIZE, GFP_KERNEL);
@@ -207,7 +283,7 @@ static int chardev_init(void)
     }
 
     printk(KERN_INFO "chardev loaded\n");
-
+/*
     // 1. ------- registration... (determ.  fops apriori)           >>>cat /proc/devices
     res = register_chrdev (dev_major, DEVNAME, &fops);
 
@@ -216,16 +292,15 @@ static int chardev_init(void)
         printk(KERN_ERR "Registration chardev failed\n");
         return res;
     }
-    printk(KERN_INFO "Registration chardev succeed\n");
 
+*/
     // 2. ------- add device...         >>>ls -la /dev/kbuf
     dev_node = MKDEV( dev_major, dev_minor);        // bind to node in /dev/kbuf (node /dev/kbuf must exist)
 
-/*
+/**/
     register_chrdev_region( dev_node, dev_count, DEVNAME);
 
     my_dev = cdev_alloc();
-
     if(my_dev == NULL)
     {
         printk(KERN_ERR "cdev_alloc failed\n" );
@@ -237,22 +312,24 @@ static int chardev_init(void)
     if (cdev_add(my_dev, dev_node, 1) == -1)
     {
         unregister_chrdev_region( dev_node, dev_count );
+        printk(KERN_ERR "Registration chardev failed\n");
         return -1;
     }
-*/
+
     memset((void*)&dev_stat, 0, sizeof( dev_stat));
+    printk(KERN_INFO "Registration chardev succeed\n");
 
     return 0;
 }
 
 static void chardev_exit(void)
 {
-    //if(my_dev)  cdev_del(my_dev);
+    if(my_dev)  cdev_del(my_dev);
 
-    //unregister_chrdev_region( dev_node, dev_count );
+    unregister_chrdev_region( dev_node, dev_count );
 
     //    int res =
-    unregister_chrdev (dev_major, DEVNAME);
+    //unregister_chrdev (dev_major, DEVNAME);
 
 
     printk(KERN_INFO "chardev unloaded\n");
