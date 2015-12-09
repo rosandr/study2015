@@ -33,50 +33,50 @@ static DEV_STAT dev_stat;
 */
 ssize_t chardev_read (struct file* fd, char __user* user, size_t len, loff_t* off)
 {
-    int rd_len;
+    int nbytes;
     int rest;
     printk(KERN_INFO "read from chardev %d %d %d\n", *off, cur_pos, len );
     dev_stat.read_cnt++;
-    *off=cur_pos;
+    //*off=cur_pos;
 
-    if( *off == BUF_SIZE )  return 0; // EOF
+    //if( *off == BUF_SIZE )  return 0; // EOF
 
 
     rest = BUF_SIZE - *off;
-    rd_len = (rest <= len) ? rest:len;
+    nbytes = (rest <= len) ? rest:len;
 
 
 
 
     //if( len > BUF_SIZE - *off )  return 0;      // -EINVALtoo big len
 
-    if( copy_to_user( user, buf+*off, rd_len) ) return -EFAULT;
+    if( copy_to_user( user, buf+*off, nbytes) ) return -EFAULT;
 
-    *off+=rd_len;
+    *off+=nbytes;
     cur_pos=*off;
-    return rd_len;
+    return nbytes;
 
 /*
     if( len < cur_pos )  return -EINVAL;      // too litle user buffer
 / *
     if( *off != 0 )     return 0;           // EOF
 
-    if( copy_to_user( user, buf, rd_len ) ) return -EFAULT;
+    if( copy_to_user( user, buf, nbytes ) ) return -EFAULT;
 
-    *off = rd_len;
+    *off = nbytes;
     cur_pos=0;
     dev_stat.read_cnt++;
 
-    return rd_len;
+    return nbytes;
     * /
 
     if( cur_pos == 0 )     return 0;           // EOF
 
-    if( copy_to_user( user, buf, rd_len ) ) return -EFAULT;
+    if( copy_to_user( user, buf, nbytes ) ) return -EFAULT;
 
     *off=cur_pos=0;
 
-    return rd_len;*/
+    return nbytes;*/
 }
 
 
@@ -88,22 +88,29 @@ ssize_t chardev_read (struct file* fd, char __user* user, size_t len, loff_t* of
 */
 ssize_t chardev_write (struct file* fd, const char __user* user, size_t len, loff_t* off)
 {
+    int nbytes;
+    int rest;
     printk( KERN_INFO "write to chardev %d %d %d\n", *off, cur_pos, len );
     dev_stat.write_cnt++;
-    *off=cur_pos;
+    // *off=cur_pos;
 
-    if( len > BUF_SIZE - *off )  return -EINVAL;      // too big len
 
-    if(copy_from_user((void *)(buf + *off), user, len))
+    rest = BUF_SIZE - *off;
+    nbytes = (rest <= len) ? rest:len;
+
+
+    //if( len > BUF_SIZE - *off )  return -EINVAL;      // too big len
+
+    if(copy_from_user((void *)(buf + *off), user, nbytes))
     {
         printk(KERN_ERR "copy_from_user() failed\n");
         return -EFAULT;
     }
 
-    *off += len;
+    *off += nbytes;
     cur_pos=*off;
 
-    return len;
+    return nbytes;
     /*
     int rest = BUF_SIZE-cur_pos;
 
@@ -135,7 +142,7 @@ loff_t chardev_seek (struct file* fd, loff_t off, int whence)
     case SEEK_SET:      // от начала
         if( off > BUF_SIZE || off < 0 )
         {
-            printk(KERN_ERR "lseek() SEEK_SET : Invalid offset!\n");
+            printk(KERN_ERR "chardev SEEK_SET : Invalid offset!\n");
             return -EOVERFLOW;
         }
         cur_pos=off;
@@ -144,7 +151,7 @@ loff_t chardev_seek (struct file* fd, loff_t off, int whence)
     case SEEK_CUR:      // от текущей
         if( (off > (BUF_SIZE-cur_pos)) || (off < (0-cur_pos)) )
         {
-            printk(KERN_ERR "lseek() SEEK_CUR : Invalid offset!\n");
+            printk(KERN_ERR "chardev SEEK_CUR : Invalid offset!\n");
             return -EOVERFLOW;
         }
         cur_pos+=off;
@@ -153,7 +160,7 @@ loff_t chardev_seek (struct file* fd, loff_t off, int whence)
     case SEEK_END:      // от конца
         if( off > 0 || off < (0-BUF_SIZE) )
         {
-            printk(KERN_ERR "lseek() SEEK_END : Invalid offset!\n");
+            printk(KERN_ERR "chardev SEEK_END : Invalid offset!\n");
             return -EOVERFLOW;
         }
 
