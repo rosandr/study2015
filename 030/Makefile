@@ -23,8 +23,8 @@ remove:
 #	`sudo rmmod print_hello.ko`
 
 clean:
-	rm *.o *.ko *.mod.c *odule*
-
+#	rm *.o *.ko *.mod.c *odule*
+	rm -rf *.o *~ core .depend .*.cmd *.ko *.mod.c .tmp_versions *odule*
 
 # Module specific targets
 genbin:

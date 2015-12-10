@@ -35,25 +35,21 @@ ssize_t chardev_read (struct file* fd, char __user* user, size_t len, loff_t* of
 {
     int nbytes;
     int rest;
-    printk(KERN_INFO "read from chardev %d %d %d\n", *off, cur_pos, len );
+    printk(KERN_INFO "read from chardev\n" );
     dev_stat.read_cnt++;
-    //*off=cur_pos;
-
-    //if( *off == BUF_SIZE )  return 0; // EOF
 
 
     rest = BUF_SIZE - *off;
-    nbytes = (rest <= len) ? rest:len;
-
-
-
+    nbytes = (rest < len) ? rest:len;
 
     //if( len > BUF_SIZE - *off )  return 0;      // -EINVALtoo big len
 
-    if( copy_to_user( user, buf+*off, nbytes) ) return -EFAULT;
+    // if( copy_to_user( user, buf + *off, nbytes) ) return -EFAULT;
+
+    nbytes -= copy_to_user( user, buf + *off, nbytes);
+
 
     *off+=nbytes;
-    cur_pos=*off;
     return nbytes;
 
 /*
@@ -81,36 +77,38 @@ ssize_t chardev_read (struct file* fd, char __user* user, size_t len, loff_t* of
 
 
 /*
+ * Файловая операция
  * fd - куда
  * буфер для полученных данных
  * размер данных
  * off ??
 */
-ssize_t chardev_write (struct file* fd, const char __user* user, size_t len, loff_t* off)
+ssize_t chardev_write (struct file* file, const char __user* user, size_t len, loff_t* off)
 {
     int nbytes;
     int rest;
-    printk( KERN_INFO "write to chardev %d %d %d\n", *off, cur_pos, len );
-    dev_stat.write_cnt++;
-    // *off=cur_pos;
 
+    printk( KERN_INFO "write to chardev\n");
+    dev_stat.write_cnt++;
+
+
+    if( *off > BUF_SIZE )  return -EINVAL;      // too big offset
 
     rest = BUF_SIZE - *off;
-    nbytes = (rest <= len) ? rest:len;
-
-
-    //if( len > BUF_SIZE - *off )  return -EINVAL;      // too big len
-
-    if(copy_from_user((void *)(buf + *off), user, nbytes))
+    nbytes = (rest < len) ? rest:len;
+/*
+    if(copy_from_user((void *)(buf + *off ), user, nbytes))
     {
         printk(KERN_ERR "copy_from_user() failed\n");
         return -EFAULT;
     }
+*/
+    nbytes -= copy_from_user((void *)(buf + *off ), user, nbytes);
+
 
     *off += nbytes;
-    cur_pos=*off;
-
     return nbytes;
+
     /*
     int rest = BUF_SIZE-cur_pos;
 
@@ -132,10 +130,13 @@ ssize_t chardev_write (struct file* fd, const char __user* user, size_t len, lof
 }
 
 
-loff_t chardev_seek (struct file* fd, loff_t off, int whence)
+loff_t chardev_seek (struct file* file, loff_t off, int whence)
 {
-    printk(KERN_INFO "chardev lseek()\n");
+    loff_t* ppos;
+    //printk(KERN_INFO "chardev lseek()\n");
     dev_stat.seek_cnt++;
+
+    ppos = &file->f_pos;
 
     switch( whence )
     {
@@ -145,16 +146,16 @@ loff_t chardev_seek (struct file* fd, loff_t off, int whence)
             printk(KERN_ERR "chardev SEEK_SET : Invalid offset!\n");
             return -EOVERFLOW;
         }
-        cur_pos=off;
+        *ppos = off;
         break;
 
     case SEEK_CUR:      // от текущей
-        if( (off > (BUF_SIZE-cur_pos)) || (off < (0-cur_pos)) )
+        if( (off > (BUF_SIZE- *ppos)) || (off < (0-*ppos)) )
         {
             printk(KERN_ERR "chardev SEEK_CUR : Invalid offset!\n");
             return -EOVERFLOW;
         }
-        cur_pos+=off;
+        *ppos += off;
         break;
 
     case SEEK_END:      // от конца
@@ -164,7 +165,7 @@ loff_t chardev_seek (struct file* fd, loff_t off, int whence)
             return -EOVERFLOW;
         }
 
-        cur_pos = off + BUF_SIZE;
+        *ppos = off + BUF_SIZE;
         break;
     default:
         return -EINVAL;
@@ -209,8 +210,8 @@ loff_t chardev_seek (struct file* fd, loff_t off, int whence)
         return -EINVAL;
     }
 */
-    return cur_pos;
-
+    printk(KERN_INFO "chardev lseek(%d)\n", (int)*ppos);
+    return *ppos;
 }
 
 
@@ -231,6 +232,7 @@ int chardev_release (struct inode* in, struct file* fd)
 
 long chardev_ioctl( struct file* fd, unsigned int cmd, unsigned long param)
 {
+    int offset=0;
     int ret =-1;
     struct task_struct* init_task = current;
     struct task_struct *task = init_task;
@@ -251,12 +253,20 @@ long chardev_ioctl( struct file* fd, unsigned int cmd, unsigned long param)
         break;
     case IOCTL_GET_PROCLIST:
         //printk( KERN_INFO "Current task is %s [%d]\n", task->comm, task->pid );
-
+/*
         do
         {
           printk( KERN_INFO "chardev IOCTL_GET_PROCLIST: %s [%d] parent %s\n",
                          task->comm, task->pid, task->parent->comm );
         } while ( (task = next_task(task)) != init_task );
+
+*/
+        do
+        {
+            snprintf((char*)buf+offset, BUF_SIZE-offset, "task name = %s, \t\tpid=%d\n", task->comm, task->pid);
+            offset += sizeof("task name = , \t\tpid=\n")+sizeof(task->comm) + sizeof(task->pid);
+        } while ( (task = next_task(task)) != init_task );
+
         break;
     default:
         break;
@@ -345,3 +355,7 @@ static void chardev_exit(void)
 
 module_init(chardev_init);
 module_exit(chardev_exit);
+
+
+MODULE_LICENSE("GPL");
+MODULE_VERSION( "0.1" );

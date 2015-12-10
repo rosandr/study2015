@@ -26,6 +26,7 @@ void print_menu()
     printf("\t4 - get statistic\n");
     printf("\t5 - reset statistic\n");
     printf("\t6 - print process list\n");
+    printf("\t7 - seek_set 0 \n");
 }
 
 //-------------------------------------------------------------------------
@@ -62,6 +63,7 @@ int main(int argc, char** argv, char** env)
         case '2':
 
             buf[0]=0;
+            //while( fgets (buf, BUF_SIZE, file) > 0)
             fgets (buf, BUF_SIZE, file);
             printf("%d  %s\n", strlen(buf), buf);
 
@@ -97,14 +99,14 @@ int main(int argc, char** argv, char** env)
             break;
         case '3':
             printf("Please, type string and press <ENTER>\n");
-            if (fgets (buf, BUF_SIZE, stdin) != NULL)
+            if ( fgets(buf, BUF_SIZE, stdin) != NULL)
             {
                 if(fputs(buf, file)<0)
                 {
                     printf("\tKbuf write error. (May be module not loaded?)\n");
                     return 0;
                 }
-                printf("wr ok\n");
+                printf("wr %s[%d]  ok\n", buf, strlen(buf));
             }
             break;
         case '4':
@@ -128,6 +130,12 @@ int main(int argc, char** argv, char** env)
         case '6':
             ioctl( fd, IOCTL_GET_PROCLIST, 0);
             break;
+
+        case '7':
+            fseek( file, 0, SEEK_SET);
+            //ioctl( fd, IOCTL_GET_PROCLIST, 0);
+            break;
+
         default:
             break;
         }
