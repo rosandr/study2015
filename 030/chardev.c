@@ -12,16 +12,15 @@
 
 #define KBUF_LOADED "kbuf loaded"
 #define BUF_SIZE PAGE_SIZE
-#define IRQ_NUM 17
+//  #define IRQ_NUM 47      ---> see chardev.h
 
 int dev_major = DEV_MAJOR;
 int dev_minor = 1;
 int dev_count=1;
 
 char* buf=NULL;     // work buffer
-int cur_pos=0;
-
 dev_t dev_node;
+
 struct cdev* my_dev=NULL;
 static DEV_STAT dev_stat;
 
@@ -85,7 +84,7 @@ ssize_t chardev_write (struct file* file, const char __user* user, size_t len, l
 loff_t chardev_seek (struct file* file, loff_t off, int whence)
 {
     loff_t* ppos;
-    //printk(KERN_INFO "chardev lseek()\n");
+    printk(KERN_INFO "chardev lseek()\n");
     dev_stat.seek_cnt++;
 
     ppos = &file->f_pos;
@@ -122,7 +121,6 @@ loff_t chardev_seek (struct file* file, loff_t off, int whence)
     default:
         return -EINVAL;
     }
-    printk(KERN_INFO "chardev lseek(%d)\n", (int)*ppos);
     return *ppos;
 }
 
@@ -142,7 +140,7 @@ int chardev_release (struct inode* in, struct file* fd)
 
 long chardev_ioctl( struct file* fd, unsigned int cmd, unsigned long param)
 {
-    int offset=0;
+    //int offset=0;
     int ret =-1;
     struct task_struct* init_task = current;
     struct task_struct *task = init_task;
@@ -162,11 +160,13 @@ long chardev_ioctl( struct file* fd, unsigned int cmd, unsigned long param)
         ret =0;
         break;
     case IOCTL_GET_PROCLIST:
+        snprintf((char*)buf, BUF_SIZE, "task name = %s, \t\tpid=%d\n", task->comm, task->pid);
+        /*
         do
         {
             snprintf((char*)buf+offset, BUF_SIZE-offset, "task name = %s, \t\tpid=%d\n", task->comm, task->pid);
             offset += sizeof("task name = , \t\tpid=\n")+sizeof(task->comm) + sizeof(task->pid);
-        } while ( (task = next_task(task)) != init_task );
+        } while ( (task = next_task(task)) != init_task );*/
         break;
     default:
         break;
@@ -233,7 +233,7 @@ static int chardev_init(void)
     {
         unregister_chrdev_region( dev_node, dev_count );
         printk(KERN_ERR "IRQ registration chardev failed\n");
-	return -1;
+        return -1;
     }
 
     memset((void*)&dev_stat, 0, sizeof( dev_stat));
@@ -245,7 +245,7 @@ static int chardev_init(void)
 static void chardev_exit(void)
 {
     synchronize_irq( IRQ_NUM );
-    free_irq( IRQ_NUM, NULL);		//
+    free_irq( IRQ_NUM, &dev_major);		//
 
     if(my_dev)  cdev_del(my_dev);
 

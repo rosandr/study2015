@@ -4,6 +4,7 @@
 
 char DEVNAME[]="kbuf";
 #define DEV_MAJOR 60
+#define IRQ_NUM 47
 
 //получение статистики
 #define IOCTL_GET_STAT _IOR(DEV_MAJOR, 0, ssize_t *)

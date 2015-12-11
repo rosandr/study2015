@@ -43,7 +43,6 @@ int testproc (int test)
         exit(0);
     case 2:
 /*
-        buf[0]=0;
         //while( fgets (buf, BUF_SIZE, file) > 0)
         fgets (buf, BUF_SIZE, file);
         printf("%d  %s\n", strlen(buf), buf);
@@ -80,14 +79,15 @@ int testproc (int test)
         if(nb==0)
         {
             printf("Statistic:\n");
-            printf("OPEN call count:%d\n", dev_stat.open_cnt);
+            printf("OPEN  call count:%d\n", dev_stat.open_cnt);
             printf("CLOSE call count:%d\n", dev_stat.close_cnt);
-            printf("READ call count:%d\n", dev_stat.read_cnt);
+            printf("READ  call count:%d\n", dev_stat.read_cnt);
             printf("WRITE call count:%d\n", dev_stat.write_cnt);
-            printf("SEEK call count:%d\n", dev_stat.seek_cnt);
+            printf("SEEK  call count:%d\n", dev_stat.seek_cnt);
             printf("IOCTL call count:%d\n", dev_stat.ioctl_cnt);
-            printf("IRQ  count:%d\n", dev_stat.irq_cnt);
+            printf("IRQ   %2d   count:%d\n", IRQ_NUM, dev_stat.irq_cnt);
         }
+        else return -1;
         break;
 
     case 5:
@@ -113,7 +113,6 @@ int main(int argc, char** argv, char** env)
 {
     char devfile_name[] = "/dev/kbuf";
     FILE* file = fopen(devfile_name, "w+");
-    fd = fileno(file);
 
     if(file==NULL)
     {
@@ -121,7 +120,7 @@ int main(int argc, char** argv, char** env)
         printf("\nPlease, create %s manualy and insert module.\n", devfile_name);
         return 0;
     }
-
+    fd = fileno(file);
     /*
     //---------------------------------------------------------
     while(1)
@@ -135,7 +134,7 @@ int main(int argc, char** argv, char** env)
     */
 
     printf("\n\t4 - get statistic\n");
-    testproc(4);
+    if( testproc(4)<0 );
 
     printf("\n\t2 - read chardev\n");
     testproc(2);
