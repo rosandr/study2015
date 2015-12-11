@@ -21,7 +21,7 @@ typedef struct
     int write_cnt;
     int seek_cnt;
     int ioctl_cnt;
-    int irq_cnt;
+    volatile unsigned int irq_cnt;
 }DEV_STAT;
 
 #endif
