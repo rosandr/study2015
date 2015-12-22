@@ -24,4 +24,13 @@ typedef struct
     int irq_cnt;
 }DEV_STAT;
 
+
+typedef struct
+{
+    struct net_device* dev;
+    int txmit_count;
+} MYNET_DEV;
+
+
+
 #endif

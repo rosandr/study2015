@@ -37,11 +37,8 @@ static DEV_STAT dev_stat;
 struct net_device* my_netdev=NULL;
 
 //========================================================
-struct mynet_dev
-{
-    struct net_device* dev;
-    int txmit_count;
-} *netdev_instance=NULL;
+MYNET_DEV *netdev_instance=NULL;
+
 
 static int mynet_dev_open(struct net_device *dev)		// ifconfig up
 {
@@ -65,6 +62,7 @@ static netdev_tx_t mynet_dev_start_xmit (struct sk_buff *skb, struct net_device 
 //    priv->txmit_count++;
     netdev_instance->txmit_count++;
 
+    printk(KERN_ERR "netdev xmit count=%d\n", netdev_instance->txmit_count++);
 
     return NET_XMIT_DROP;
 }
@@ -112,7 +110,7 @@ static void mynet_dev_init( struct net_device* dev)
 static struct net_device* mynet_dev_create( const char* name )
 {
     struct net_device *dev;
-    dev = alloc_netdev (sizeof(struct mynet_dev), name, NET_NAME_UNKNOWN, mynet_dev_init);
+    dev = alloc_netdev (sizeof(MYNET_DEV), name, NET_NAME_UNKNOWN, mynet_dev_init);
     
     return dev;
 }
@@ -263,7 +261,7 @@ long chardev_ioctl( struct file* fd, unsigned int cmd, unsigned long param)
     switch (cmd)
     {
     case IOCTL_GET_NETSTAT:
-        if( copy_to_user((void __user *)param, (void*)netdev_instance, sizeof( struct mynet_dev)))
+        if( copy_to_user((void __user *)param, (void*)netdev_instance, sizeof( MYNET_DEV)))
             printk(KERN_ERR "chardev IOCTL_GET_NETSTAT failed\n");
         else ret=0;
         break;
