@@ -10,13 +10,10 @@
 #include <linux/device.h>
 #include <linux/etherdevice.h>
 
-
 //#include <linux/sched.h>
 //#include <linux/interrupt.h>
 
 #include "netdev.h"
-
-
 
 #define KBUF_LOADED "kbuf loaded"
 #define BUF_SIZE PAGE_SIZE
@@ -37,12 +34,14 @@ struct cdev* my_dev=NULL;
 static DEV_STAT dev_stat;
 
 
+struct net_device* my_netdev=NULL;
+
 //========================================================
 struct mynet_dev
 {
     struct net_device* dev;
     int txmit_count;
-};
+} *netdev_instance=NULL;
 
 static int mynet_dev_open(struct net_device *dev)		// ifconfig up
 {
@@ -62,7 +61,9 @@ static int mynet_dev_stop(struct net_device *dev)		// ifconfig down
 
 static netdev_tx_t mynet_dev_start_xmit (struct sk_buff *skb, struct net_device *dev)
 {
-
+//    struct mynet_dev* priv = netdev_priv(dev);
+//    priv->txmit_count++;
+    netdev_instance->txmit_count++;
 
 
     return NET_XMIT_DROP;
@@ -96,8 +97,11 @@ static const struct net_device_ops mynet_dev_ops=
 
 static void mynet_dev_init( struct net_device* dev)
 {
-    struct mynet_dev* priv = netdev_priv(dev);
-    
+    netdev_instance = netdev_priv(dev);
+    netdev_instance->dev = dev;
+    netdev_instance->txmit_count=0;
+
+
     ether_setup(dev);
     //dev->watchdog_timeo = ????;
     dev->netdev_ops = &mynet_dev_ops;
@@ -109,19 +113,9 @@ static struct net_device* mynet_dev_create( const char* name )
 {
     struct net_device *dev;
     dev = alloc_netdev (sizeof(struct mynet_dev), name, NET_NAME_UNKNOWN, mynet_dev_init);
-
+    
     return dev;
 }
-
-
-
-
-
-
-
-
-
-//========================================================
 
 
 
@@ -268,6 +262,12 @@ long chardev_ioctl( struct file* fd, unsigned int cmd, unsigned long param)
 
     switch (cmd)
     {
+    case IOCTL_GET_NETSTAT:
+        if( copy_to_user((void __user *)param, (void*)netdev_instance, sizeof( struct mynet_dev)))
+            printk(KERN_ERR "chardev IOCTL_GET_NETSTAT failed\n");
+        else ret=0;
+        break;
+
     case IOCTL_GET_STAT:
         if( copy_to_user((void __user *)param, (void*)&dev_stat, sizeof( dev_stat)))
             printk(KERN_ERR "chardev IOCTL_GET_STAT failed\n");
@@ -356,8 +356,22 @@ static int chardev_init(void)
     }
 */
 
+    //-------------------------------------------------------
+    my_netdev = mynet_dev_create( "mynet0" );
+    if( my_netdev  == NULL)
+    {
+        unregister_chrdev_region( dev_node, dev_count );
+        printk(KERN_ERR "Netdev create failed\n");
+        return -1;
+    }
 
-
+    if(register_netdev(my_netdev))
+    {
+	free_netdev(my_netdev);
+        unregister_chrdev_region( dev_node, dev_count );
+        printk(KERN_ERR "Netdev create failed\n");
+        return -1;
+    }
 
 
     memset((void*)&dev_stat, 0, sizeof( dev_stat));
@@ -370,6 +384,12 @@ static void chardev_exit(void)
 {
 //    synchronize_irq( IRQ_NUM );
 //    free_irq( IRQ_NUM, NULL);		//
+
+    if(my_netdev)
+    {
+	unregister_netdev(my_netdev);
+	free_netdev(my_netdev);
+    }
 
     if(my_dev)  cdev_del(my_dev);
 
