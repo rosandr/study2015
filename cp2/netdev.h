@@ -10,7 +10,7 @@ char DEVNAME[]="kbuf";
 #define IOCTL_RESET_STAT _IOR(DEV_MAJOR, 1, ssize_t *)
 //получение списка процессов
 #define IOCTL_GET_PROCLIST _IOR(DEV_MAJOR, 2, ssize_t *)
-//получение ce статистики
+//получение ceтевой статистики
 #define IOCTL_GET_NETSTAT _IOR(DEV_MAJOR, 3, ssize_t *)
 
 typedef struct
@@ -29,8 +29,8 @@ typedef struct
 {
     struct net_device* dev;
     int txmit_count;
-    char buf[20];
-} MYNET_DEV;
+    char buf[256];
+} NETDEV_PRIV;
 
 
 

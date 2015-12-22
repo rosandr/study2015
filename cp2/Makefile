@@ -1,8 +1,8 @@
 ifneq ($(KERNELRELEASE),)
 -include Kbuild
 else
-#KDIR := /lib/modules/`uname -r`/build
-KDIR := /home/study/kernel/linux-4.3
+KDIR := /lib/modules/`uname -r`/build
+3KDIR := /home/study/kernel/linux-4.3
 PWD  := $(shell pwd)
 
 default:

@@ -10,9 +10,6 @@
 #include <linux/device.h>
 #include <linux/etherdevice.h>
 
-//#include <linux/sched.h>
-//#include <linux/interrupt.h>
-
 #include "netdev.h"
 
 #define KBUF_LOADED "kbuf loaded"
@@ -21,74 +18,55 @@
 
 //typedef irqreturn_t (*irq_handler_t)(int, void*);
 
-//char DEVNAME[]="kbuf";
 int dev_major = DEV_MAJOR;
 int dev_minor = 1;
 int dev_count=1;
 
 char* buf=NULL;     // work buffer
-int cur_pos=0;
 
 dev_t dev_node;
 struct cdev* my_dev=NULL;
 static DEV_STAT dev_stat;
 
-
 struct net_device* my_netdev=NULL;
+NETDEV_PRIV* my_netdev_priv=NULL;
 
 //========================================================
-MYNET_DEV *netdev_instance=NULL;
-
-
-static int mynet_dev_open(struct net_device *dev)		// ifconfig up
+int mynet_dev_open(struct net_device *dev)		// ifconfig up
 {
-
-
     return 0;
 }
 
 
-static int mynet_dev_stop(struct net_device *dev)		// ifconfig down
+int mynet_dev_stop(struct net_device *dev)		// ifconfig down
 {
-
-
     return 0;
 }
 
 
-static netdev_tx_t mynet_dev_start_xmit (struct sk_buff *skb, struct net_device *dev)
+netdev_tx_t mynet_dev_start_xmit (struct sk_buff *skb, struct net_device *dev)
 {
-//    struct mynet_dev* priv = netdev_priv(dev);
-//    priv->txmit_count++;
+//    struct mynet_dev* priv = my_netdev_priv(dev);
+    my_netdev_priv->txmit_count++;
+    memset(my_netdev_priv->buf, 0, 255);
 
+    if(skb->len > 256)
+        memcpy(my_netdev_priv->buf, skb->data, 256);
+    else
+        memcpy(my_netdev_priv->buf, skb->data, skb->len);
 
-    netdev_instance->txmit_count++;
-
-    memcpy( (void*)netdev_instance->buf, (void*)skb->data, sizeof( netdev_instance->buf));
-
-
-    printk(KERN_INFO "netdev xmit count=%d\n", netdev_instance->txmit_count);
-
+    printk(KERN_INFO "netdev xmit count=%d\n", my_netdev_priv->txmit_count);
     dev_kfree_skb_any(skb);
-    //kfree(skb);
-    return NET_XMIT_DROP;
+
+    return NETDEV_TX_OK;
 }
 
 
 void mynet_dev_tx_timeout(struct net_device *dev)
 {
-
-
     return;
 }
 
-/*
-struct net_device_stats* mynet_dev_get_stats(struct net_device *dev)
-{
-
-
-}
-*/
 
 static const struct net_device_ops mynet_dev_ops=
 {
@@ -96,35 +74,22 @@ static const struct net_device_ops mynet_dev_ops=
     .ndo_stop = mynet_dev_stop,
     .ndo_start_xmit = mynet_dev_start_xmit,
     .ndo_tx_timeout = mynet_dev_tx_timeout,
-    //.ndo_get_stats = mynet_dev_get_stats
 };
 
 
 static void mynet_dev_init( struct net_device* dev)
 {
-    netdev_instance = netdev_priv(dev);
-    netdev_instance->dev = dev;
-    netdev_instance->txmit_count=0;
+    my_netdev_priv = netdev_priv(dev);
+    my_netdev_priv->dev = dev;
+    my_netdev_priv->txmit_count=0;
 
-    memset((void*)netdev_instance, 0, sizeof( netdev_instance->buf));
-
+    memset(my_netdev_priv->buf, 0, sizeof( my_netdev_priv->buf));
 
     ether_setup(dev);
-    //dev->watchdog_timeo = ????;
+    dev->watchdog_timeo = 100;
     dev->netdev_ops = &mynet_dev_ops;
     dev->flags |= IFF_NOARP;
 }
-
-
-static struct net_device* mynet_dev_create( const char* name )
-{
-    struct net_device *dev;
-    dev = alloc_netdev (sizeof(MYNET_DEV), name, NET_NAME_UNKNOWN, mynet_dev_init);
-    
-    return dev;
-}
-
-
 
 /*
 //========================================================
@@ -151,9 +116,6 @@ ssize_t chardev_read (struct file* fd, char __user* user, size_t len, loff_t* of
 
     rest = BUF_SIZE - *off;
     nbytes = (rest < len) ? rest:len;
-
-    //if( len > BUF_SIZE - *off )  return 0;      // -EINVALtoo big len
-    // if( copy_to_user( user, buf + *off, nbytes) ) return -EFAULT;
 
     nbytes -= copy_to_user( user, buf + *off, nbytes);
 
@@ -182,21 +144,14 @@ ssize_t chardev_write (struct file* file, const char __user* user, size_t len, l
 
     rest = BUF_SIZE - *off;
     nbytes = (rest < len) ? rest:len;
-/*
-    if(copy_from_user((void *)(buf + *off ), user, nbytes))
-    {
-        printk(KERN_ERR "copy_from_user() failed\n");
-        return -EFAULT;
-    }
-*/
-    nbytes -= copy_from_user((void *)(buf + *off ), user, nbytes);
 
+    nbytes -= copy_from_user((void *)(buf + *off ), user, nbytes);
 
     *off += nbytes;
     return nbytes;
 }
 
-/*
+
 loff_t chardev_seek (struct file* file, loff_t off, int whence)
 {
     loff_t* ppos;
@@ -240,7 +195,7 @@ loff_t chardev_seek (struct file* file, loff_t off, int whence)
     printk(KERN_INFO "chardev lseek(%d)\n", (int)*ppos);
     return *ppos;
 }
-*/
+
 
 int chardev_open (struct inode* in, struct file* fd)
 {
@@ -270,7 +225,7 @@ long chardev_ioctl( struct file* fd, unsigned int cmd, unsigned long param)
     switch (cmd)
     {
     case IOCTL_GET_NETSTAT:
-        if( copy_to_user((void __user *)param, (void*)netdev_instance, sizeof( MYNET_DEV)))
+        if( copy_to_user((void __user *)param, (void*)my_netdev_priv, sizeof( NETDEV_PRIV)))
             printk(KERN_ERR "chardev IOCTL_GET_NETSTAT failed\n");
         else ret=0;
         break;
@@ -292,7 +247,6 @@ long chardev_ioctl( struct file* fd, unsigned int cmd, unsigned long param)
           printk( KERN_INFO "chardev IOCTL_GET_PROCLIST: %s [%d] parent %s\n",
                          task->comm, task->pid, task->parent->comm );
         } while ( (task = next_task(task)) != init_task );
-
 */
         do
         {
@@ -311,12 +265,12 @@ long chardev_ioctl( struct file* fd, unsigned int cmd, unsigned long param)
 static const struct file_operations fops=
 {
     .owner = THIS_MODULE,
-//    .llseek = chardev_seek,
+    .llseek = chardev_seek,
     .read = chardev_read,
     .write = chardev_write,
     .open = chardev_open,
     .release = chardev_release,
-//    .unlocked_ioctl = chardev_ioctl,
+    .unlocked_ioctl = chardev_ioctl,
 };
 
 static int chardev_init(void)
@@ -351,7 +305,7 @@ static int chardev_init(void)
     {
         unregister_chrdev_region( dev_node, dev_count );
         printk(KERN_ERR "Registration chardev failed\n");
-        return -1;
+        return -ENODEV;
     }
 /*
     //-------------------------------------------------------
@@ -364,25 +318,26 @@ static int chardev_init(void)
 */
 
     //-------------------------------------------------------
-    my_netdev = mynet_dev_create( "mynet0" );
-    if( my_netdev  == NULL)
+    my_netdev = alloc_netdev (sizeof(NETDEV_PRIV), "mynet0",
+                              /*NET_NAME_UNKNOWN,*/ mynet_dev_init);
+
+    if( my_netdev == NULL)
     {
         unregister_chrdev_region( dev_node, dev_count );
         printk(KERN_ERR "Netdev create failed\n");
-        return -1;
+        return -ENODEV;
     }
 
     if(register_netdev(my_netdev))
     {
-	free_netdev(my_netdev);
+        free_netdev(my_netdev);
         unregister_chrdev_region( dev_node, dev_count );
         printk(KERN_ERR "Netdev create failed\n");
-        return -1;
+        return -ENODEV;
     }
 
-
     memset((void*)&dev_stat, 0, sizeof( dev_stat));
-    printk(KERN_INFO "Registration chardev succeed\n");
+    printk(KERN_INFO "Registration chardev (netdev) succeed\n");
 
     return 0;
 }
@@ -394,8 +349,8 @@ static void chardev_exit(void)
 
     if(my_netdev)
     {
-	unregister_netdev(my_netdev);
-	free_netdev(my_netdev);
+        unregister_netdev(my_netdev);
+        free_netdev(my_netdev);
     }
 
     if(my_dev)  cdev_del(my_dev);

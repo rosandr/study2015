@@ -33,12 +33,11 @@ DEV_STAT dev_stat;
 char buf[BUF_SIZE];
 int fd=0;
 
-MYNET_DEV net_stat;
-
+NETDEV_PRIV net_stat;
 
 int testproc (int test)
 {
-    int nb, len;
+    int i, nb, len;
     switch (test)
     {
     case 1:
@@ -111,18 +110,19 @@ int testproc (int test)
         {
             printf("Net statistic:\n");
             printf("Xmit count=%d\n", net_stat.txmit_count);
-            //printf("CLOSE call count:%d\n", dev_stat.close_cnt);
-            //printf("READ  call count:%d\n", dev_stat.read_cnt);
-            //printf("WRITE call count:%d\n", dev_stat.write_cnt);
-            //printf("SEEK  call count:%d\n", dev_stat.seek_cnt);
-            //printf("IOCTL call count:%d\n", dev_stat.ioctl_cnt);
-            //printf("IRQ   %2d   count:%d\n", IRQ_NUM, dev_stat.irq_cnt);
+
+            for( i=0; i<256; i++)
+            {
+                if(i%16)
+                    printf(" %02X", net_stat.buf[i]);
+                else
+                    printf("\n%02X", net_stat.buf[i]);
+            }
+            printf("\n");
         }
         else return -1;
 
         break;
-
-
 
     default:
         break;
@@ -161,48 +161,5 @@ int main(int argc, char** argv, char** env)
     printf("\n\t4 - get net statistic\n");
     testproc(8);
 
-/*
-    printf("\n\t2 - read chardev\n");
-    testproc(2);
-
-    printf("\n\t2 - read chardev\n");
-    testproc(2);
-
-    printf("\n\t3 - write \"qwertyuiop\" to chardev\n");
-    testproc(3);
-
-    printf("\n\t3 - write \"qwertyuiop\" to chardev\n");
-    testproc(3);
-
-    printf("\n\t2 - read chardev\n");
-    testproc(2);
-
-    printf("\n\t7 - seek_set 0 \n");
-    testproc(7);
-
-    printf("\n\t2 - read chardev\n");
-    testproc(2);
-
-    printf("\n\t2 - read chardev\n");
-    testproc(2);
-
-    printf("\n\t2 - read chardev\n");
-    testproc(2);
-
-    printf("\n\t4 - get statistic\n");
-    testproc(4);
-
-    printf("\n\t6 - print process \n");
-    testproc(6);
-
-    //printf("\n\t7 - seek_set 0 \n");
-    testproc(7);
-
-    //printf("\n\t2 - read chardev\n");
-    testproc(2);
-
-    printf("\n\t1 - exit\n");
-    testproc(1);
-*/
     return 0;
 }
