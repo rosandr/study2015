@@ -4,6 +4,7 @@
 
 char DEVNAME[]="kbuf";
 #define DEV_MAJOR 60
+#define IRQ_NUM 47
 
 //получение статистики
 #define IOCTL_GET_STAT _IOR(DEV_MAJOR, 0, ssize_t *)
@@ -20,7 +21,7 @@ typedef struct
     int write_cnt;
     int seek_cnt;
     int ioctl_cnt;
-    int irq_cnt;
+    volatile unsigned int irq_cnt;
 }DEV_STAT;
 
 #endif

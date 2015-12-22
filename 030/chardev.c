@@ -12,22 +12,17 @@
 
 #define KBUF_LOADED "kbuf loaded"
 #define BUF_SIZE PAGE_SIZE
-#define IRQ_NUM 17
+//  #define IRQ_NUM 47      ---> see chardev.h
 
-typedef irqreturn_t (*irq_handler_t)(int, void*);
-
-//char DEVNAME[]="kbuf";
 int dev_major = DEV_MAJOR;
 int dev_minor = 1;
 int dev_count=1;
 
 char* buf=NULL;     // work buffer
-int cur_pos=0;
-
 dev_t dev_node;
+
 struct cdev* my_dev=NULL;
 static DEV_STAT dev_stat;
-
 
 //========================================================
 irqreturn_t chardev_irq (int val, void* pp)
@@ -50,19 +45,14 @@ ssize_t chardev_read (struct file* fd, char __user* user, size_t len, loff_t* of
     printk(KERN_INFO "read from chardev\n" );
     dev_stat.read_cnt++;
 
-
     rest = BUF_SIZE - *off;
     nbytes = (rest < len) ? rest:len;
 
-    //if( len > BUF_SIZE - *off )  return 0;      // -EINVALtoo big len
-    // if( copy_to_user( user, buf + *off, nbytes) ) return -EFAULT;
-
     nbytes -= copy_to_user( user, buf + *off, nbytes);
-
     *off+=nbytes;
+    
     return nbytes;
 }
-
 
 /*
  * Файловая операция
@@ -79,22 +69,14 @@ ssize_t chardev_write (struct file* file, const char __user* user, size_t len, l
     printk( KERN_INFO "write to chardev\n");
     dev_stat.write_cnt++;
 
-
     if( *off > BUF_SIZE )  return -EINVAL;      // too big offset
 
     rest = BUF_SIZE - *off;
     nbytes = (rest < len) ? rest:len;
-/*
-    if(copy_from_user((void *)(buf + *off ), user, nbytes))
-    {
-        printk(KERN_ERR "copy_from_user() failed\n");
-        return -EFAULT;
-    }
-*/
+
     nbytes -= copy_from_user((void *)(buf + *off ), user, nbytes);
-
-
     *off += nbytes;
+    
     return nbytes;
 }
 
@@ -102,7 +84,7 @@ ssize_t chardev_write (struct file* file, const char __user* user, size_t len, l
 loff_t chardev_seek (struct file* file, loff_t off, int whence)
 {
     loff_t* ppos;
-    //printk(KERN_INFO "chardev lseek()\n");
+    printk(KERN_INFO "chardev lseek()\n");
     dev_stat.seek_cnt++;
 
     ppos = &file->f_pos;
@@ -139,10 +121,8 @@ loff_t chardev_seek (struct file* file, loff_t off, int whence)
     default:
         return -EINVAL;
     }
-    printk(KERN_INFO "chardev lseek(%d)\n", (int)*ppos);
     return *ppos;
 }
-
 
 int chardev_open (struct inode* in, struct file* fd)
 {
@@ -150,7 +130,6 @@ int chardev_open (struct inode* in, struct file* fd)
     dev_stat.open_cnt++;
     return 0;
 }
-
 
 int chardev_release (struct inode* in, struct file* fd)
 {
@@ -161,7 +140,7 @@ int chardev_release (struct inode* in, struct file* fd)
 
 long chardev_ioctl( struct file* fd, unsigned int cmd, unsigned long param)
 {
-    int offset=0;
+    //int offset=0;
     int ret =-1;
     struct task_struct* init_task = current;
     struct task_struct *task = init_task;
@@ -181,21 +160,13 @@ long chardev_ioctl( struct file* fd, unsigned int cmd, unsigned long param)
         ret =0;
         break;
     case IOCTL_GET_PROCLIST:
-        //printk( KERN_INFO "Current task is %s [%d]\n", task->comm, task->pid );
-/*
-        do
-        {
-          printk( KERN_INFO "chardev IOCTL_GET_PROCLIST: %s [%d] parent %s\n",
-                         task->comm, task->pid, task->parent->comm );
-        } while ( (task = next_task(task)) != init_task );
-
-*/
+        snprintf((char*)buf, BUF_SIZE, "task name = %s, \t\tpid=%d\n", task->comm, task->pid);
+        /*
         do
         {
             snprintf((char*)buf+offset, BUF_SIZE-offset, "task name = %s, \t\tpid=%d\n", task->comm, task->pid);
             offset += sizeof("task name = , \t\tpid=\n")+sizeof(task->comm) + sizeof(task->pid);
-        } while ( (task = next_task(task)) != init_task );
-
+        } while ( (task = next_task(task)) != init_task );*/
         break;
     default:
         break;
@@ -217,9 +188,7 @@ static const struct file_operations fops=
 
 static int chardev_init(void)
 {
-    //int res;
-
-    // 3. ------- implement internal buffer
+     // 3. ------- implement internal buffer
     buf = kzalloc( BUF_SIZE, GFP_KERNEL);
 
     if(buf == NULL)
@@ -232,18 +201,15 @@ static int chardev_init(void)
 /*
     // 1. ------- registration... (determ.  fops apriori)           >>>cat /proc/devices
     res = register_chrdev (dev_major, DEVNAME, &fops);
-
     if( res < 0 )
     {
         printk(KERN_ERR "Registration chardev failed\n");
         return res;
     }
-
 */
     // 2. ------- add device...         >>>ls -la /dev/kbuf
     dev_node = MKDEV( dev_major, dev_minor);        // bind to node in /dev/kbuf (node /dev/kbuf must exist)
 
-/**/
     register_chrdev_region( dev_node, dev_count, DEVNAME);
 
     my_dev = cdev_alloc();
@@ -267,7 +233,7 @@ static int chardev_init(void)
     {
         unregister_chrdev_region( dev_node, dev_count );
         printk(KERN_ERR "IRQ registration chardev failed\n");
-	return -1;
+        return -1;
     }
 
     memset((void*)&dev_stat, 0, sizeof( dev_stat));
@@ -279,15 +245,12 @@ static int chardev_init(void)
 static void chardev_exit(void)
 {
     synchronize_irq( IRQ_NUM );
-    free_irq( IRQ_NUM, NULL);		//
+    free_irq( IRQ_NUM, &dev_major);		//
 
     if(my_dev)  cdev_del(my_dev);
 
     unregister_chrdev_region( dev_node, dev_count );
-
-    //    int res =
     //unregister_chrdev (dev_major, DEVNAME);
-
 
     printk(KERN_INFO "chardev unloaded\n");
     kfree(buf);
