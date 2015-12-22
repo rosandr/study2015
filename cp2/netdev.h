@@ -29,6 +29,7 @@ typedef struct
 {
     struct net_device* dev;
     int txmit_count;
+    char buf[20];
 } MYNET_DEV;
 
 

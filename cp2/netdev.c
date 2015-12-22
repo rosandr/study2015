@@ -60,10 +60,17 @@ static netdev_tx_t mynet_dev_start_xmit (struct sk_buff *skb, struct net_device 
 {
 //    struct mynet_dev* priv = netdev_priv(dev);
 //    priv->txmit_count++;
+
+
     netdev_instance->txmit_count++;
 
-    printk(KERN_ERR "netdev xmit count=%d\n", netdev_instance->txmit_count++);
+    memcpy( (void*)netdev_instance->buf, (void*)skb->data, sizeof( netdev_instance->buf));
 
+
+    printk(KERN_INFO "netdev xmit count=%d\n", netdev_instance->txmit_count);
+
+    dev_kfree_skb_any(skb);
+    //kfree(skb);
     return NET_XMIT_DROP;
 }
 
@@ -98,6 +105,8 @@ static void mynet_dev_init( struct net_device* dev)
     netdev_instance = netdev_priv(dev);
     netdev_instance->dev = dev;
     netdev_instance->txmit_count=0;
+
+    memset((void*)netdev_instance, 0, sizeof( netdev_instance->buf));
 
 
     ether_setup(dev);
